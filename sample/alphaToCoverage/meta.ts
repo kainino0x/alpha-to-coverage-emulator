@@ -4,6 +4,8 @@ export default {
 Alpha-to-coverage is an alternative to alpha testing and alpha blending. See:
 <https://bgolus.medium.com/anti-aliased-alpha-test-the-esoteric-alpha-to-coverage-8b177335ae4f>
 
+FIXME this description needs to be updated
+
 This sample visualizes how alpha-to-coverage translates alpha values into sample
 coverage on your device. It draws two full-screen quads into a 4-sample
 texture, each with the configured color and alpha value. Then, it visualizes the

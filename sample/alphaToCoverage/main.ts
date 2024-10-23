@@ -4,6 +4,7 @@ import showMultisampleTextureWGSL from './showMultisampleTexture.wgsl';
 import renderWithAlphaToCoverageWGSL from './renderWithAlphaToCoverage.wgsl';
 import { quitIfWebGPUNotAvailable } from '../util';
 import { kEmulatedAlphaToCoverage } from './emulatedAlphaToCoverage';
+import { SolidColors } from './SolidColors';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const adapter = await navigator.gpu?.requestAdapter();
@@ -11,18 +12,28 @@ const device = await adapter?.requestDevice();
 quitIfWebGPUNotAvailable(adapter, device);
 
 //
+// Scene initialization
+//
+
+const scenes = {
+  SolidColors: new SolidColors(device),
+};
+
+//
 // GUI controls
 //
 
+const kSceneNames = ['SolidColors'] as const;
+
 const kInitConfig = {
-  scene: 'SolidColors',
+  scene: 'SolidColors' as typeof kSceneNames[number],
   comparisonDevice: 'no emulation',
   sizeLog2: 3,
   showResolvedColor: true,
-  color1: 0x0000ff,
-  alpha1: 0,
-  color2: 0xff0000,
-  alpha2: 16,
+  SolidColors_color1: 0x0000ff,
+  SolidColors_alpha1: 0,
+  SolidColors_color2: 0xff0000,
+  SolidColors_alpha2: 16,
   animate: true,
 };
 const config = { ...kInitConfig };
@@ -56,20 +67,20 @@ gui.width = 300;
 
   const scenes = gui.addFolder('Scenes');
   scenes.open();
-  scenes.add(config, 'scene', ['SolidColors']);
+  scenes.add(config, 'scene', kSceneNames);
 
   const sceneSolidColors = scenes.addFolder('SolidColors scene options');
   sceneSolidColors.open();
 
   const draw1Panel = sceneSolidColors.addFolder('Draw 1');
   draw1Panel.open();
-  draw1Panel.addColor(config, 'color1').name('color');
-  draw1Panel.add(config, 'alpha1', 0, 255).name('alpha');
+  draw1Panel.addColor(config, 'SolidColors_color1').name('color');
+  draw1Panel.add(config, 'SolidColors_alpha1', 0, 255).name('alpha');
 
   const draw2Panel = sceneSolidColors.addFolder('Draw 2');
   draw2Panel.open();
-  draw2Panel.addColor(config, 'color2').name('color');
-  draw2Panel.add(config, 'alpha2', 0, 255).name('alpha');
+  draw2Panel.addColor(config, 'SolidColors_color2').name('color');
+  draw2Panel.add(config, 'SolidColors_alpha2', 0, 255).name('alpha');
   draw2Panel.add(config, 'animate', false);
 }
 
@@ -94,11 +105,6 @@ context.configure({
 //
 // GPU state controlled by the config gui
 //
-
-const bufInstanceColors = device.createBuffer({
-  usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.VERTEX,
-  size: 8,
-});
 
 let actualMSTexture: GPUTexture, actualMSTextureView: GPUTextureView;
 let emulatedMSTexture: GPUTexture, emulatedMSTextureView: GPUTextureView;
@@ -183,19 +189,12 @@ function resetConfiguredObjects() {
 
 function applyConfig() {
   // Update the colors in the (instance-step-mode) vertex buffer
-  const data = new Uint8Array([
-    // instance 0 color
-    (config.color1 >> 16) & 0xff, // R
-    (config.color1 >> 8) & 0xff, // G
-    (config.color1 >> 0) & 0xff, // B
-    config.alpha1,
-    // instance 1 color
-    (config.color2 >> 16) & 0xff, // R
-    (config.color2 >> 8) & 0xff, // G
-    (config.color2 >> 0) & 0xff, // B
-    config.alpha2,
-  ]);
-  device.queue.writeBuffer(bufInstanceColors, 0, data);
+  scenes.SolidColors.updateConfig(
+    config.SolidColors_color1,
+    config.SolidColors_alpha1,
+    config.SolidColors_color2,
+    config.SolidColors_alpha2
+  );
 
   resetConfiguredObjects();
 }
@@ -241,16 +240,7 @@ const showMultisampleTextureModule = device.createShaderModule({
 const showMultisampleTexturePipeline = device.createRenderPipeline({
   label: 'showMultisampleTexturePipeline',
   layout: 'auto',
-  vertex: {
-    module: showMultisampleTextureModule,
-    buffers: [
-      {
-        stepMode: 'instance',
-        arrayStride: 4,
-        attributes: [{ shaderLocation: 0, format: 'unorm8x4', offset: 0 }],
-      },
-    ],
-  },
+  vertex: { module: showMultisampleTextureModule },
   fragment: {
     module: showMultisampleTextureModule,
     targets: [{ format: presentationFormat }],
@@ -313,8 +303,7 @@ function render() {
       ],
     });
     pass.setPipeline(renderWithAlphaToCoveragePipeline);
-    pass.setVertexBuffer(0, bufInstanceColors);
-    pass.draw(6, 2);
+    scenes[config.scene].render(pass);
     pass.end();
   }
   // renderWithEmulatedAlphaToCoverage pass
@@ -331,8 +320,7 @@ function render() {
       ],
     });
     pass.setPipeline(renderWithEmulatedAlphaToCoveragePipeline);
-    pass.setVertexBuffer(0, bufInstanceColors);
-    pass.draw(6, 2);
+    scenes[config.scene].render(pass);
     pass.end();
   }
   // showMultisampleTexture pass
@@ -350,7 +338,6 @@ function render() {
     });
     pass.setPipeline(showMultisampleTexturePipeline);
     pass.setBindGroup(0, showMultisampleTextureBG);
-    pass.setVertexBuffer(0, bufInstanceColors);
     pass.draw(6);
     pass.end();
   }
@@ -362,7 +349,7 @@ function frame() {
     // scrub alpha2 over 15 seconds
     let alpha = ((performance.now() / 15000) % 1) * (255 + 20) - 10;
     alpha = Math.max(0, Math.min(alpha, 255));
-    config.alpha2 = alpha;
+    config.SolidColors_alpha2 = alpha;
     gui.updateDisplay();
   }
   updateCanvasSize();
