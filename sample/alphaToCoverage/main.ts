@@ -2,7 +2,6 @@ import { GUI } from 'dat.gui';
 
 import showMultisampleTextureWGSL from './showMultisampleTexture.wgsl';
 import renderWithAlphaToCoverageWGSL from './renderWithAlphaToCoverage.wgsl';
-import renderWithEmulatedAlphaToCoverageWGSL from './renderWithEmulatedAlphaToCoverage.wgsl';
 import { quitIfWebGPUNotAvailable } from '../util';
 import { kEmulatedAlphaToCoverage } from './emulatedAlphaToCoverage';
 
@@ -16,16 +15,15 @@ quitIfWebGPUNotAvailable(adapter, device);
 //
 
 const kInitConfig = {
-  scene: 'solid_colors',
-  leftDevice: 'no emulation',
-  rightDevice: 'Apple M1 Pro',
+  scene: 'SolidColors',
+  comparisonDevice: 'no emulation',
   sizeLog2: 3,
-  showResolvedColor: false,
+  showResolvedColor: true,
   color1: 0x0000ff,
   alpha1: 0,
   color2: 0xff0000,
   alpha2: 16,
-  animate: false,
+  animate: true,
 };
 const config = { ...kInitConfig };
 
@@ -43,15 +41,14 @@ gui.width = 300;
 
   gui.add(config, 'sizeLog2', 0, 8, 1).name('size = 2**');
 
-  const leftPanel = gui.addFolder('Left hand side + resolved color');
+  const leftPanel = gui.addFolder('Native alpha-to-coverage (large dot)');
   leftPanel.open();
-  leftPanel.add(config, 'leftDevice', ['no emulation']).name('emulated device');
-  leftPanel.add(config, 'showResolvedColor', true);
+  leftPanel.add(config, 'showResolvedColor', false);
 
-  const rightPanel = gui.addFolder('Right hand side');
+  const rightPanel = gui.addFolder('Emulated comparison (small dot)');
   rightPanel.open();
   rightPanel
-    .add(config, 'rightDevice', [
+    .add(config, 'comparisonDevice', [
       'no emulation',
       ...Object.keys(kEmulatedAlphaToCoverage),
     ])
@@ -59,17 +56,17 @@ gui.width = 300;
 
   const scenes = gui.addFolder('Scenes');
   scenes.open();
-  scenes.add(config, 'scene', ['solid_colors']);
+  scenes.add(config, 'scene', ['SolidColors']);
 
-  const solidColors = scenes.addFolder('solid_colors scene options');
-  solidColors.open();
+  const sceneSolidColors = scenes.addFolder('SolidColors scene options');
+  sceneSolidColors.open();
 
-  const draw1Panel = solidColors.addFolder('Draw 1');
+  const draw1Panel = sceneSolidColors.addFolder('Draw 1');
   draw1Panel.open();
   draw1Panel.addColor(config, 'color1').name('color');
   draw1Panel.add(config, 'alpha1', 0, 255).name('alpha');
 
-  const draw2Panel = solidColors.addFolder('Draw 2');
+  const draw2Panel = sceneSolidColors.addFolder('Draw 2');
   draw2Panel.open();
   draw2Panel.addColor(config, 'color2').name('color');
   draw2Panel.add(config, 'alpha2', 0, 255).name('alpha');
@@ -144,16 +141,16 @@ function resetConfiguredObjects() {
     lastSize = size;
   }
 
-  if (lastEmulatedDevice !== config.rightDevice) {
-    if (config.rightDevice === 'no emulation') {
+  if (lastEmulatedDevice !== config.comparisonDevice) {
+    if (config.comparisonDevice === 'no emulation') {
       renderWithEmulatedAlphaToCoveragePipeline = null;
     } else {
       // Pipeline to render to a multisampled texture using *emulated* alpha-to-coverage
       const renderWithEmulatedAlphaToCoverageModule = device.createShaderModule(
         {
           code:
-            renderWithEmulatedAlphaToCoverageWGSL +
-            kEmulatedAlphaToCoverage[config.rightDevice],
+            renderWithAlphaToCoverageWGSL +
+            kEmulatedAlphaToCoverage[config.comparisonDevice],
         }
       );
       renderWithEmulatedAlphaToCoveragePipeline = device.createRenderPipeline({
@@ -173,13 +170,14 @@ function resetConfiguredObjects() {
         },
         fragment: {
           module: renderWithEmulatedAlphaToCoverageModule,
+          entryPoint: 'fmain_emulated',
           targets: [{ format: 'rgba8unorm' }],
         },
         multisample: { count: 4, alphaToCoverageEnabled: false },
         primitive: { topology: 'triangle-list' },
       });
     }
-    lastEmulatedDevice = config.rightDevice;
+    lastEmulatedDevice = config.comparisonDevice;
   }
 }
 
@@ -207,7 +205,9 @@ function applyConfig() {
 //
 
 const renderWithAlphaToCoverageModule = device.createShaderModule({
-  code: renderWithAlphaToCoverageWGSL,
+  code:
+    renderWithAlphaToCoverageWGSL +
+    `fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 { return 0; }`,
 });
 const renderWithAlphaToCoveragePipeline = device.createRenderPipeline({
   label: 'renderWithAlphaToCoveragePipeline',
@@ -224,6 +224,7 @@ const renderWithAlphaToCoveragePipeline = device.createRenderPipeline({
   },
   fragment: {
     module: renderWithAlphaToCoverageModule,
+    entryPoint: 'fmain_native',
     targets: [{ format: 'rgba8unorm' }],
   },
   multisample: { count: 4, alphaToCoverageEnabled: true },
@@ -272,7 +273,7 @@ function render() {
       {
         binding: 1,
         resource:
-          config.rightDevice === 'no emulation'
+          config.comparisonDevice === 'no emulation'
             ? actualMSTextureView
             : emulatedMSTextureView,
       },

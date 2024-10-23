@@ -1,5 +1,5 @@
-@group(0) @binding(0) var tex_left: texture_multisampled_2d<f32>;
-@group(0) @binding(1) var tex_right: texture_multisampled_2d<f32>;
+@group(0) @binding(0) var tex: texture_multisampled_2d<f32>;
+@group(0) @binding(1) var tex_comparison: texture_multisampled_2d<f32>;
 @group(0) @binding(2) var resolved: texture_2d<f32>;
 
 struct Varying {
@@ -43,7 +43,7 @@ const kSampleOuterRadius = kSampleDistanceFromCloseEdge + kGridEdgeHalfWidth;
 
 @fragment
 fn fmain(vary: Varying) -> @location(0) vec4f {
-  let dim = textureDimensions(tex_left);
+  let dim = textureDimensions(tex);
   let dimMax = max(dim.x, dim.y);
 
   let xy = vary.uv * f32(dimMax);
@@ -54,19 +54,22 @@ fn fmain(vary: Varying) -> @location(0) vec4f {
   if (dpdx(xy.x) < kGridEdgeHalfWidth * 2) & (dpdy(xy.y) < kGridEdgeHalfWidth * 2) {
     // Check if we're close to a sample; if so, visualize the sample value
     for (var sampleIndex = 0; sampleIndex < kSampleCount; sampleIndex += 1) {
-      let distanceFromSample = distance(xyFrac, kSamplePositions[sampleIndex]);
-      if distanceFromSample < kSampleInnerRadius {
-        // Draw a circle for the sample value
-        if xyFrac.x < kSamplePositions[sampleIndex].x {
-          let val = textureLoad(tex_left, xyInt, sampleIndex).rgb;
+      let distanceFromCenter = distance(xyFrac, kSamplePositions[sampleIndex]);
+      let distanceFromComparisonCenter = distance(xyFrac, kSamplePositions[sampleIndex] + vec2(kSampleInnerRadius / 2, 0));
+
+      if distanceFromCenter < kSampleOuterRadius {
+        if distanceFromCenter > kSampleInnerRadius {
+          // Draw a ring around the circle
+          return vec4f(0, 0, 0, 1);
+        } else if distanceFromComparisonCenter < kSampleInnerRadius / 2 {
+          // Render the comparison result as a little dot on the right
+          let val = textureLoad(tex_comparison, xyInt, sampleIndex).rgb;
           return vec4f(val, 1);
-        } else {
-          let val = textureLoad(tex_right, xyInt, sampleIndex).rgb;
+        } else if distanceFromCenter < kSampleInnerRadius {
+          // Draw a circle for the sample value
+          let val = textureLoad(tex, xyInt, sampleIndex).rgb;
           return vec4f(val, 1);
         }
-      } else if distanceFromSample < kSampleOuterRadius {
-        // Draw a ring around the circle
-        return vec4f(0, 0, 0, 1);
       }
     }
 
