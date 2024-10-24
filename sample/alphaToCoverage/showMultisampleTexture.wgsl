@@ -1,5 +1,5 @@
-@group(0) @binding(0) var tex: texture_multisampled_2d<f32>;
-@group(0) @binding(1) var tex_comparison: texture_multisampled_2d<f32>;
+@group(0) @binding(0) var texLargeDot: texture_multisampled_2d<f32>;
+@group(0) @binding(1) var texSmallDot: texture_multisampled_2d<f32>;
 @group(0) @binding(2) var resolved: texture_2d<f32>;
 
 struct Varying {
@@ -40,10 +40,11 @@ const kSampleDistanceFromCloseEdge = 0.125; // from the standard sample position
 const kGridEdgeHalfWidth = 0.025;
 const kSampleInnerRadius = kSampleDistanceFromCloseEdge - kGridEdgeHalfWidth;
 const kSampleOuterRadius = kSampleDistanceFromCloseEdge + kGridEdgeHalfWidth;
+const kGridColor = vec4f(0.1, 0.1, 0.1, 1);
 
 @fragment
 fn fmain(vary: Varying) -> @location(0) vec4f {
-  let dim = textureDimensions(tex);
+  let dim = textureDimensions(texLargeDot);
   let dimMax = max(dim.x, dim.y);
 
   let xy = vary.uv * f32(dimMax);
@@ -60,14 +61,14 @@ fn fmain(vary: Varying) -> @location(0) vec4f {
       if distanceFromCenter < kSampleOuterRadius {
         if distanceFromCenter > kSampleInnerRadius {
           // Draw a ring around the circle
-          return vec4f(0, 0, 0, 1);
+          return kGridColor;
         } else if distanceFromComparisonCenter < kSampleInnerRadius / 2 {
           // Render the comparison result as a little dot on the right
-          let val = textureLoad(tex_comparison, xyInt, sampleIndex).rgb;
+          let val = textureLoad(texSmallDot, xyInt, sampleIndex).rgb;
           return vec4f(val, 1);
         } else if distanceFromCenter < kSampleInnerRadius {
           // Draw a circle for the sample value
-          let val = textureLoad(tex, xyInt, sampleIndex).rgb;
+          let val = textureLoad(texLargeDot, xyInt, sampleIndex).rgb;
           return vec4f(val, 1);
         }
       }
@@ -76,7 +77,7 @@ fn fmain(vary: Varying) -> @location(0) vec4f {
     // If close to a grid edge, render the grid
     let distanceToGridEdge = abs((xyFrac + 0.5) % 1 - 0.5);
     if min(distanceToGridEdge.x, distanceToGridEdge.y) < kGridEdgeHalfWidth {
-      return vec4f(0, 0, 0, 1);
+      return kGridColor;
     }
   }
 

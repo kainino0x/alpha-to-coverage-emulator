@@ -1,10 +1,11 @@
 import { GUI } from 'dat.gui';
 
 import showMultisampleTextureWGSL from './showMultisampleTexture.wgsl';
-import renderWithAlphaToCoverageWGSL from './renderWithAlphaToCoverage.wgsl';
 import { quitIfWebGPUNotAvailable } from '../util';
 import { kEmulatedAlphaToCoverage } from './emulatedAlphaToCoverage';
-import { SolidColors } from './SolidColors';
+
+import { SolidColors } from './scenes/SolidColors';
+import { Leaf } from './scenes/Leaf';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const adapter = await navigator.gpu?.requestAdapter();
@@ -17,18 +18,22 @@ quitIfWebGPUNotAvailable(adapter, device);
 
 const scenes = {
   SolidColors: new SolidColors(device),
+  Leaf: new Leaf(device),
 };
 
 //
 // GUI controls
 //
 
-const kSceneNames = ['SolidColors'] as const;
+const kSceneNames = ['SolidColors', 'Leaf'] as const;
+type DeviceName = keyof typeof kEmulatedAlphaToCoverage;
 
 const kInitConfig = {
-  scene: 'SolidColors' as typeof kSceneNames[number],
-  comparisonDevice: 'no emulation',
-  sizeLog2: 3,
+  scene: 'Leaf' as (typeof kSceneNames)[number],
+  emulatedDevice: 'Apple M1 Pro' as DeviceName,
+  largeDotEmulate: false,
+  smallDotEmulate: false,
+  sizeLog2: 4,
   showResolvedColor: true,
   SolidColors_color1: 0x0000ff,
   SolidColors_alpha1: 0,
@@ -36,6 +41,7 @@ const kInitConfig = {
   SolidColors_alpha2: 16,
   animate: true,
 };
+export type Config = typeof kInitConfig;
 const config = { ...kInitConfig };
 
 const gui = new GUI();
@@ -48,22 +54,27 @@ gui.width = 300;
     },
   };
 
-  gui.add(buttons, 'initial').name('reset all settings');
+  gui.add(buttons, 'initial').name('Reset all settings');
 
-  gui.add(config, 'sizeLog2', 0, 8, 1).name('size = 2**');
+  const visualizationPanel = gui.addFolder('Visualization');
+  visualizationPanel.open();
+  visualizationPanel.add(config, 'sizeLog2', 0, 8, 1).name('size = 2**');
+  visualizationPanel
+    .add(config, 'emulatedDevice', Object.keys(kEmulatedAlphaToCoverage))
+    .name('device for emulation');
 
-  const leftPanel = gui.addFolder('Native alpha-to-coverage (large dot)');
-  leftPanel.open();
-  leftPanel.add(config, 'showResolvedColor', false);
+  const largeDotPanel = visualizationPanel.addFolder(
+    'Primary (large outer dot, used for resolve)'
+  );
+  largeDotPanel.open();
+  largeDotPanel.add(config, 'largeDotEmulate', false).name('emulated');
+  largeDotPanel.add(config, 'showResolvedColor', false);
 
-  const rightPanel = gui.addFolder('Emulated comparison (small dot)');
-  rightPanel.open();
-  rightPanel
-    .add(config, 'comparisonDevice', [
-      'no emulation',
-      ...Object.keys(kEmulatedAlphaToCoverage),
-    ])
-    .name('emulated device');
+  const smallDotPanel = visualizationPanel.addFolder(
+    'Reference (small inner dot, for visual comparison)'
+  );
+  smallDotPanel.open();
+  smallDotPanel.add(config, 'smallDotEmulate', false).name('emulated');
 
   const scenes = gui.addFolder('Scenes');
   scenes.open();
@@ -80,8 +91,11 @@ gui.width = 300;
   const draw2Panel = sceneSolidColors.addFolder('Draw 2');
   draw2Panel.open();
   draw2Panel.addColor(config, 'SolidColors_color2').name('color');
-  draw2Panel.add(config, 'SolidColors_alpha2', 0, 255).name('alpha');
+  draw2Panel.add(config, 'SolidColors_alpha2', 0, 255, 0.001).name('alpha');
   draw2Panel.add(config, 'animate', false);
+
+  const sceneLeaf = scenes.addFolder('Leaf scene options');
+  sceneLeaf.open();
 }
 
 //
@@ -106,20 +120,19 @@ context.configure({
 // GPU state controlled by the config gui
 //
 
-let actualMSTexture: GPUTexture, actualMSTextureView: GPUTextureView;
-let emulatedMSTexture: GPUTexture, emulatedMSTextureView: GPUTextureView;
+let smallDotMSTexture: GPUTexture, smallDotMSTextureView: GPUTextureView;
+let largeDotMSTexture: GPUTexture, largeDotMSTextureView: GPUTextureView;
 let resolveTexture: GPUTexture, resolveTextureView: GPUTextureView;
-let lastSize = 0;
-let renderWithEmulatedAlphaToCoveragePipeline: GPURenderPipeline | null = null;
-let lastEmulatedDevice = 'no emulation';
-function resetConfiguredObjects() {
-  const size = 2 ** config.sizeLog2;
-  if (lastSize !== size) {
-    if (actualMSTexture) {
-      actualMSTexture.destroy();
+let lastSizeLog2 = 0;
+function reallocateRenderTargets() {
+  if (lastSizeLog2 !== config.sizeLog2) {
+    const size = 1 << config.sizeLog2;
+
+    if (smallDotMSTexture) {
+      smallDotMSTexture.destroy();
     }
-    if (emulatedMSTexture) {
-      emulatedMSTexture.destroy();
+    if (largeDotMSTexture) {
+      largeDotMSTexture.destroy();
     }
     const msTextureDesc = {
       format: 'rgba8unorm' as const,
@@ -128,10 +141,10 @@ function resetConfiguredObjects() {
       size: [size, size],
       sampleCount: 4,
     };
-    actualMSTexture = device.createTexture(msTextureDesc);
-    actualMSTextureView = actualMSTexture.createView();
-    emulatedMSTexture = device.createTexture(msTextureDesc);
-    emulatedMSTextureView = emulatedMSTexture.createView();
+    smallDotMSTexture = device.createTexture(msTextureDesc);
+    smallDotMSTextureView = smallDotMSTexture.createView();
+    largeDotMSTexture = device.createTexture(msTextureDesc);
+    largeDotMSTextureView = largeDotMSTexture.createView();
 
     if (resolveTexture) {
       resolveTexture.destroy();
@@ -144,91 +157,17 @@ function resetConfiguredObjects() {
     });
     resolveTextureView = resolveTexture.createView();
 
-    lastSize = size;
-  }
-
-  if (lastEmulatedDevice !== config.comparisonDevice) {
-    if (config.comparisonDevice === 'no emulation') {
-      renderWithEmulatedAlphaToCoveragePipeline = null;
-    } else {
-      // Pipeline to render to a multisampled texture using *emulated* alpha-to-coverage
-      const renderWithEmulatedAlphaToCoverageModule = device.createShaderModule(
-        {
-          code:
-            renderWithAlphaToCoverageWGSL +
-            kEmulatedAlphaToCoverage[config.comparisonDevice],
-        }
-      );
-      renderWithEmulatedAlphaToCoveragePipeline = device.createRenderPipeline({
-        label: 'renderWithEmulatedAlphaToCoveragePipeline',
-        layout: 'auto',
-        vertex: {
-          module: renderWithEmulatedAlphaToCoverageModule,
-          buffers: [
-            {
-              stepMode: 'instance',
-              arrayStride: 4,
-              attributes: [
-                { shaderLocation: 0, format: 'unorm8x4', offset: 0 },
-              ],
-            },
-          ],
-        },
-        fragment: {
-          module: renderWithEmulatedAlphaToCoverageModule,
-          entryPoint: 'fmain_emulated',
-          targets: [{ format: 'rgba8unorm' }],
-        },
-        multisample: { count: 4, alphaToCoverageEnabled: false },
-        primitive: { topology: 'triangle-list' },
-      });
-    }
-    lastEmulatedDevice = config.comparisonDevice;
+    lastSizeLog2 = config.sizeLog2;
   }
 }
 
 function applyConfig() {
   // Update the colors in the (instance-step-mode) vertex buffer
-  scenes.SolidColors.updateConfig(
-    config.SolidColors_color1,
-    config.SolidColors_alpha1,
-    config.SolidColors_color2,
-    config.SolidColors_alpha2
-  );
+  scenes.SolidColors.updateConfig(config);
+  scenes.Leaf.updateConfig(config);
 
-  resetConfiguredObjects();
+  reallocateRenderTargets();
 }
-
-//
-// Pipeline to render to a multisampled texture using alpha-to-coverage
-//
-
-const renderWithAlphaToCoverageModule = device.createShaderModule({
-  code:
-    renderWithAlphaToCoverageWGSL +
-    `fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 { return 0; }`,
-});
-const renderWithAlphaToCoveragePipeline = device.createRenderPipeline({
-  label: 'renderWithAlphaToCoveragePipeline',
-  layout: 'auto',
-  vertex: {
-    module: renderWithAlphaToCoverageModule,
-    buffers: [
-      {
-        stepMode: 'instance',
-        arrayStride: 4,
-        attributes: [{ shaderLocation: 0, format: 'unorm8x4', offset: 0 }],
-      },
-    ],
-  },
-  fragment: {
-    module: renderWithAlphaToCoverageModule,
-    entryPoint: 'fmain_native',
-    targets: [{ format: 'rgba8unorm' }],
-  },
-  multisample: { count: 4, alphaToCoverageEnabled: true },
-  primitive: { topology: 'triangle-list' },
-});
 
 //
 // "Debug" view of the actual texture contents
@@ -257,28 +196,31 @@ function render() {
     layout: showMultisampleTextureBGL,
     entries: [
       {
+        // group(0) @binding(0) var texLargeDot
         binding: 0,
-        resource: actualMSTextureView,
+        resource: largeDotMSTextureView,
       },
       {
+        // group(0) @binding(1) var texSmallDot
         binding: 1,
-        resource:
-          config.comparisonDevice === 'no emulation'
-            ? actualMSTextureView
-            : emulatedMSTextureView,
+        resource: smallDotMSTextureView,
       },
-      { binding: 2, resource: resolveTextureView },
+      {
+        // @group(0) @binding(2) var resolved
+        binding: 2,
+        resource: resolveTextureView,
+      },
     ],
   });
 
   const commandEncoder = device.createCommandEncoder();
-  // clear resolveTextureView to gray if it won't be used
+  // clear resolveTextureView to black if it won't be used
   if (!config.showResolvedColor) {
     const pass = commandEncoder.beginRenderPass({
       colorAttachments: [
         {
           view: resolveTextureView,
-          clearValue: [0.3, 0.3, 0.3, 1],
+          clearValue: [0, 0, 0, 1],
           loadOp: 'clear',
           storeOp: 'store',
         },
@@ -286,13 +228,13 @@ function render() {
     });
     pass.end();
   }
-  // renderWithAlphaToCoverage pass
+  // large dot pass
   {
     const pass = commandEncoder.beginRenderPass({
-      label: 'renderWithAlphaToCoverage pass',
+      label: 'large dot pass',
       colorAttachments: [
         {
-          view: actualMSTextureView,
+          view: largeDotMSTextureView,
           resolveTarget: config.showResolvedColor
             ? resolveTextureView
             : undefined,
@@ -302,25 +244,23 @@ function render() {
         },
       ],
     });
-    pass.setPipeline(renderWithAlphaToCoveragePipeline);
-    scenes[config.scene].render(pass);
+    scenes[config.scene].render(pass, config.largeDotEmulate);
     pass.end();
   }
-  // renderWithEmulatedAlphaToCoverage pass
-  if (renderWithEmulatedAlphaToCoveragePipeline) {
+  // small dot pass
+  {
     const pass = commandEncoder.beginRenderPass({
-      label: 'renderWithEmulatedAlphaToCoverage pass',
+      label: 'small dot pass',
       colorAttachments: [
         {
-          view: emulatedMSTextureView,
+          view: smallDotMSTextureView,
           clearValue: [0, 0, 0, 1], // black background
           loadOp: 'clear',
           storeOp: 'store',
         },
       ],
     });
-    pass.setPipeline(renderWithEmulatedAlphaToCoveragePipeline);
-    scenes[config.scene].render(pass);
+    scenes[config.scene].render(pass, config.smallDotEmulate);
     pass.end();
   }
   // showMultisampleTexture pass
@@ -346,10 +286,12 @@ function render() {
 
 function frame() {
   if (config.animate) {
-    // scrub alpha2 over 15 seconds
-    let alpha = ((performance.now() / 15000) % 1) * (255 + 20) - 10;
-    alpha = Math.max(0, Math.min(alpha, 255));
-    config.SolidColors_alpha2 = alpha;
+    if (config.scene === 'SolidColors') {
+      // scrub alpha2 over 15 seconds
+      let alpha = ((performance.now() / 15000) % 1) * (255 + 20) - 10;
+      alpha = Math.max(0, Math.min(alpha, 255));
+      config.SolidColors_alpha2 = alpha;
+    }
     gui.updateDisplay();
   }
   updateCanvasSize();
