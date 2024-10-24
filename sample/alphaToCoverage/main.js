@@ -2690,6 +2690,29 @@ const kEmulatedAlphaToCoverage = {
       return ${0b1111};
     }
   `.trimEnd(),
+    'ARM Mali-G78': `\
+    fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
+      let i = (xy.y % 2) * 2 + (xy.x % 2);
+      // TODO: this isn't verified yet
+      if (alpha <   8 / 256.0) { return ${0b0000}; }
+      if (alpha <  24 / 256.0) { return array(${0b0000}u, ${0b1000}, ${0b0000}, ${0b0000})[i]; }
+      if (alpha <  40 / 256.0) { return array(${0b0001}u, ${0b1000}, ${0b0000}, ${0b0000})[i]; }
+      if (alpha <  56 / 256.0) { return array(${0b0001}u, ${0b1000}, ${0b0000}, ${0b0001})[i]; }
+      if (alpha <  72 / 256.0) { return array(${0b0001}u, ${0b1000}, ${0b1000}, ${0b0001})[i]; }
+      if (alpha <  88 / 256.0) { return array(${0b0001}u, ${0b1010}, ${0b1000}, ${0b0001})[i]; }
+      if (alpha < 104 / 256.0) { return array(${0b0101}u, ${0b1010}, ${0b1000}, ${0b0001})[i]; }
+      if (alpha < 120 / 256.0) { return array(${0b0101}u, ${0b1010}, ${0b1000}, ${0b0101})[i]; }
+      if (alpha < 136 / 256.0) { return array(${0b0101}u, ${0b1010}, ${0b1010}, ${0b0101})[i]; }
+      if (alpha < 152 / 256.0) { return array(${0b0101}u, ${0b1110}, ${0b1010}, ${0b0101})[i]; }
+      if (alpha < 168 / 256.0) { return array(${0b0111}u, ${0b1110}, ${0b1010}, ${0b0101})[i]; }
+      if (alpha < 184 / 256.0) { return array(${0b0111}u, ${0b1110}, ${0b1010}, ${0b0111})[i]; }
+      if (alpha < 200 / 256.0) { return array(${0b0111}u, ${0b1110}, ${0b1110}, ${0b0111})[i]; }
+      if (alpha < 216 / 256.0) { return array(${0b0111}u, ${0b1111}, ${0b1110}, ${0b0111})[i]; }
+      if (alpha < 232 / 256.0) { return array(${0b1111}u, ${0b1111}, ${0b1110}, ${0b0111})[i]; }
+      if (alpha < 248 / 256.0) { return array(${0b1111}u, ${0b1111}, ${0b1110}, ${0b1111})[i]; }
+      return ${0b1111};
+    }
+  `.trimEnd(),
 };
 
 var solidColorsWGSL = `// Vertex
