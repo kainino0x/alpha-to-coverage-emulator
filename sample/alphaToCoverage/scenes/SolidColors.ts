@@ -49,8 +49,8 @@ export class SolidColors {
 
   modifyConfigForAnimation(config: Config) {
     // scrub alpha2 over 15 seconds
-    let alpha = ((performance.now() / 15000) % 1) * (255 + 20) - 10;
-    alpha = Math.max(0, Math.min(alpha, 255));
+    let alpha = ((performance.now() / 15000) % 1) * (100 + 10) - 5;
+    alpha = Math.max(0, Math.min(alpha, 100));
     config.SolidColors_alpha2 = alpha;
   }
 
@@ -60,12 +60,12 @@ export class SolidColors {
       ((config.SolidColors_color1 >> 16) & 0xff) / 255, // R
       ((config.SolidColors_color1 >> 8) & 0xff) / 255, // G
       ((config.SolidColors_color1 >> 0) & 0xff) / 255, // B
-      config.SolidColors_alpha1 / 255,
+      config.SolidColors_alpha1 / 100,
       // instance 1 color
       ((config.SolidColors_color2 >> 16) & 0xff) / 255, // R
       ((config.SolidColors_color2 >> 8) & 0xff) / 255, // G
       ((config.SolidColors_color2 >> 0) & 0xff) / 255, // B
-      config.SolidColors_alpha2 / 255,
+      config.SolidColors_alpha2 / 100,
     ]);
     this.device.queue.writeBuffer(this.bufInstanceColors, 0, data);
 
