@@ -4,7 +4,7 @@ export default {
 Alpha-to-coverage is an alternative to alpha testing and alpha blending. See:
 <https://bgolus.medium.com/anti-aliased-alpha-test-the-esoteric-alpha-to-coverage-8b177335ae4f>
 
-FIXME this description needs to be updated
+FIXME: this description needs to be updated
 
 This sample visualizes how alpha-to-coverage translates alpha values into sample
 coverage on your device. It draws two full-screen quads into a 4-sample
@@ -17,6 +17,8 @@ This results in different average "blending" proportions between the black
 background, the first draw, and the second draw.
 Device differences include different tile sizes (e.g. 1x1, 2x2, or 4x4),
 "moving" samples (or not) around with in the tile as alpha increases, etc.
+
+FIXME: list all of the files
 `,
   filename: __DIRNAME__,
   sources: [

@@ -1,26 +1,15 @@
 /**
- * Database of alpha-to-coverage patterns from different devices.
- *
- * Name of device ->
- *   Array of patterns from a=0.0 to a=1.0, evenly spaced, excluding endpoints ->
- *     Array of N*N masks depending on the block size of the pattern used
- *     (in row-major order)
- */
-export const alphaToCoverageDatabase: { [k: string]: PatternSequence } = {
-  'NVIDIA GeForce RTX 3070': [[0b1000], [0b1001], [0b1011]],
-  'Intel HD Graphics 4400': [[0b0001], [0b0011], [0b0111]],
-};
-
-type PatternSequence = ReadonlyArray<Pattern>;
-type Pattern = ReadonlyArray<Mask>;
-type Mask = number;
-
-/**
  * For each device name, provides the source for a WGSL function which emulates
  * the alpha-to-coverage algorithm of that device by mapping (alpha, x, y) to
  * a sample mask.
  */
 export const kEmulatedAlphaToCoverage = {
+  'Fake single-sample': `\
+    fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
+      if (alpha < 0.5) { return 0; }
+      return 0xf;
+    }
+  `,
   'Apple M1 Pro': `\
     fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
       let i = (xy.y % 2) * 2 + (xy.x % 2);

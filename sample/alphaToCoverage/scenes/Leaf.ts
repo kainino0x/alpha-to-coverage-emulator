@@ -26,11 +26,18 @@ export class Leaf {
         targets: [{ format: 'rgba8unorm' }],
       },
       multisample: { count: 4, alphaToCoverageEnabled: true },
+      depthStencil: {
+        format: 'depth24plus',
+        depthWriteEnabled: false,
+        depthCompare: 'always',
+      },
       primitive: { topology: 'triangle-list' },
     });
   }
 
-  updateConfig(config: Config) {
+  modifyConfigForAnimation() {}
+
+  applyConfig(config: Config) {
     if (this.lastEmulatedDevice !== config.emulatedDevice) {
       // Pipeline to render to a multisampled texture using *emulated* alpha-to-coverage
       const solidColorsEmulatedModule = this.device.createShaderModule({
@@ -46,6 +53,11 @@ export class Leaf {
           targets: [{ format: 'rgba8unorm' }],
         },
         multisample: { count: 4, alphaToCoverageEnabled: false },
+        depthStencil: {
+          format: 'depth24plus',
+          depthWriteEnabled: false,
+          depthCompare: 'always',
+        },
         primitive: { topology: 'triangle-list' },
       });
       this.lastEmulatedDevice = config.emulatedDevice;

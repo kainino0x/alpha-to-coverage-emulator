@@ -6,6 +6,7 @@ import { kEmulatedAlphaToCoverage } from './emulatedAlphaToCoverage';
 
 import { SolidColors } from './scenes/SolidColors';
 import { Leaf } from './scenes/Leaf';
+import { Foliage } from './scenes/Foliage';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const adapter = await navigator.gpu?.requestAdapter();
@@ -19,26 +20,28 @@ quitIfWebGPUNotAvailable(adapter, device);
 const scenes = {
   SolidColors: new SolidColors(device),
   Leaf: new Leaf(device),
+  Foliage: new Foliage(device),
 };
 
 //
 // GUI controls
 //
 
-const kSceneNames = ['SolidColors', 'Leaf'] as const;
+const kSceneNames = ['SolidColors', 'Leaf', 'Foliage'] as const;
 type DeviceName = keyof typeof kEmulatedAlphaToCoverage;
 
 const kInitConfig = {
-  scene: 'Leaf' as (typeof kSceneNames)[number],
+  scene: 'Foliage' as (typeof kSceneNames)[number],
   emulatedDevice: 'Apple M1 Pro' as DeviceName,
   largeDotEmulate: false,
   smallDotEmulate: false,
-  sizeLog2: 4,
+  sizeLog2: 8,
   showResolvedColor: true,
   SolidColors_color1: 0x0000ff,
   SolidColors_alpha1: 0,
   SolidColors_color2: 0xff0000,
   SolidColors_alpha2: 16,
+  Foliage_cameraRotation: 30,
   animate: true,
 };
 export type Config = typeof kInitConfig;
@@ -48,20 +51,44 @@ const gui = new GUI();
 gui.width = 300;
 {
   const buttons = {
-    initial() {
+    foliageDemo() {
       Object.assign(config, kInitConfig);
       gui.updateDisplay();
     },
+    leafEmulated() {
+      Object.assign(config, kInitConfig);
+      (config.scene = 'Leaf'), (config.sizeLog2 = 7);
+      config.largeDotEmulate = true;
+      config.smallDotEmulate = true;
+      gui.updateDisplay();
+    },
+    patternInspector() {
+      Object.assign(config, kInitConfig);
+      (config.scene = 'SolidColors'), (config.sizeLog2 = 3);
+      gui.updateDisplay();
+    },
+    patternInspectorEmulated() {
+      this.patternInspector();
+      config.largeDotEmulate = true;
+      config.smallDotEmulate = true;
+    },
   };
 
-  gui.add(buttons, 'initial').name('Reset all settings');
+  const presets = gui.addFolder('Presets');
+  presets.open();
+  presets.add(buttons, 'foliageDemo').name('foliage demo (default)');
+  presets.add(buttons, 'leafEmulated').name('leaf closeup (emulated) ');
+  presets.add(buttons, 'patternInspector').name('pattern inspector');
+  presets
+    .add(buttons, 'patternInspectorEmulated')
+    .name('pattern inspector (emulated)');
 
   const visualizationPanel = gui.addFolder('Visualization');
   visualizationPanel.open();
-  visualizationPanel.add(config, 'sizeLog2', 0, 8, 1).name('size = 2**');
+  visualizationPanel.add(config, 'sizeLog2', 0, 9, 1).name('size = 2**');
   visualizationPanel
     .add(config, 'emulatedDevice', Object.keys(kEmulatedAlphaToCoverage))
-    .name('device for emulation');
+    .name('device to emulate');
 
   const largeDotPanel = visualizationPanel.addFolder(
     'Primary (large outer dot, used for resolve)'
@@ -76,11 +103,12 @@ gui.width = 300;
   smallDotPanel.open();
   smallDotPanel.add(config, 'smallDotEmulate', false).name('emulated');
 
-  const scenes = gui.addFolder('Scenes');
-  scenes.open();
-  scenes.add(config, 'scene', kSceneNames);
+  const scenesPanel = gui.addFolder('Scenes');
+  scenesPanel.open();
+  scenesPanel.add(config, 'scene', kSceneNames);
+  scenesPanel.add(config, 'animate', false);
 
-  const sceneSolidColors = scenes.addFolder('SolidColors scene options');
+  const sceneSolidColors = scenesPanel.addFolder('SolidColors scene options');
   sceneSolidColors.open();
 
   const draw1Panel = sceneSolidColors.addFolder('Draw 1');
@@ -92,10 +120,12 @@ gui.width = 300;
   draw2Panel.open();
   draw2Panel.addColor(config, 'SolidColors_color2').name('color');
   draw2Panel.add(config, 'SolidColors_alpha2', 0, 255, 0.001).name('alpha');
-  draw2Panel.add(config, 'animate', false);
 
-  const sceneLeaf = scenes.addFolder('Leaf scene options');
-  sceneLeaf.open();
+  const sceneFoliage = scenesPanel.addFolder('Foliage scene options');
+  sceneFoliage.open();
+  sceneFoliage
+    .add(config, 'Foliage_cameraRotation', 0, 360, 1)
+    .name('camera rotation');
 }
 
 //
@@ -123,6 +153,7 @@ context.configure({
 let smallDotMSTexture: GPUTexture, smallDotMSTextureView: GPUTextureView;
 let largeDotMSTexture: GPUTexture, largeDotMSTextureView: GPUTextureView;
 let resolveTexture: GPUTexture, resolveTextureView: GPUTextureView;
+let depthTexture: GPUTexture, depthTextureView: GPUTextureView;
 let lastSizeLog2 = 0;
 function reallocateRenderTargets() {
   if (lastSizeLog2 !== config.sizeLog2) {
@@ -157,14 +188,24 @@ function reallocateRenderTargets() {
     });
     resolveTextureView = resolveTexture.createView();
 
+    if (depthTexture) {
+      depthTexture.destroy();
+    }
+    depthTexture = device.createTexture({
+      format: 'depth24plus',
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
+      size: [size, size],
+      sampleCount: 4,
+    });
+    depthTextureView = depthTexture.createView();
+
     lastSizeLog2 = config.sizeLog2;
   }
 }
 
 function applyConfig() {
   // Update the colors in the (instance-step-mode) vertex buffer
-  scenes.SolidColors.updateConfig(config);
-  scenes.Leaf.updateConfig(config);
+  scenes[config.scene].applyConfig(config);
 
   reallocateRenderTargets();
 }
@@ -243,6 +284,12 @@ function render() {
           storeOp: 'store',
         },
       ],
+      depthStencilAttachment: {
+        view: depthTextureView,
+        depthLoadOp: 'clear',
+        depthClearValue: 1,
+        depthStoreOp: 'discard',
+      },
     });
     scenes[config.scene].render(pass, config.largeDotEmulate);
     pass.end();
@@ -259,6 +306,12 @@ function render() {
           storeOp: 'store',
         },
       ],
+      depthStencilAttachment: {
+        view: depthTextureView,
+        depthLoadOp: 'clear',
+        depthClearValue: 1,
+        depthStoreOp: 'discard',
+      },
     });
     scenes[config.scene].render(pass, config.smallDotEmulate);
     pass.end();
@@ -286,12 +339,7 @@ function render() {
 
 function frame() {
   if (config.animate) {
-    if (config.scene === 'SolidColors') {
-      // scrub alpha2 over 15 seconds
-      let alpha = ((performance.now() / 15000) % 1) * (255 + 20) - 10;
-      alpha = Math.max(0, Math.min(alpha, 255));
-      config.SolidColors_alpha2 = alpha;
-    }
+    scenes[config.scene].modifyConfigForAnimation(config);
     gui.updateDisplay();
   }
   updateCanvasSize();

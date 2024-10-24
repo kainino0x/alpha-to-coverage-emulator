@@ -34,6 +34,10 @@ export class SolidColors {
         targets: [{ format: 'rgba8unorm' }],
       },
       multisample: { count: 4, alphaToCoverageEnabled: true },
+      depthStencil: {
+        format: 'depth24plus',
+        depthWriteEnabled: false,
+      },
       primitive: { topology: 'triangle-list' },
     });
 
@@ -43,7 +47,14 @@ export class SolidColors {
     });
   }
 
-  updateConfig(config: Config) {
+  modifyConfigForAnimation(config: Config) {
+    // scrub alpha2 over 15 seconds
+    let alpha = ((performance.now() / 15000) % 1) * (255 + 20) - 10;
+    alpha = Math.max(0, Math.min(alpha, 255));
+    config.SolidColors_alpha2 = alpha;
+  }
+
+  applyConfig(config: Config) {
     const data = new Float32Array([
       // instance 0 color
       ((config.SolidColors_color1 >> 16) & 0xff) / 255, // R
@@ -84,6 +95,10 @@ export class SolidColors {
           targets: [{ format: 'rgba8unorm' }],
         },
         multisample: { count: 4, alphaToCoverageEnabled: false },
+        depthStencil: {
+          format: 'depth24plus',
+          depthWriteEnabled: false,
+        },
         primitive: { topology: 'triangle-list' },
       });
       this.lastEmulatedDevice = config.emulatedDevice;
