@@ -40,7 +40,7 @@ const kInitConfig = {
   SolidColors_color1: 0x0000ff,
   SolidColors_alpha1: 0,
   SolidColors_color2: 0xff0000,
-  SolidColors_alpha2: 16,
+  SolidColors_alpha2: 6,
   Foliage_cameraRotation: 30,
   animate: true,
 };
@@ -114,12 +114,12 @@ gui.width = 300;
   const draw1Panel = sceneSolidColors.addFolder('Draw 1');
   draw1Panel.open();
   draw1Panel.addColor(config, 'SolidColors_color1').name('color');
-  draw1Panel.add(config, 'SolidColors_alpha1', 0, 255).name('alpha');
+  draw1Panel.add(config, 'SolidColors_alpha1', 0, 100, 0.001).name('alpha %');
 
   const draw2Panel = sceneSolidColors.addFolder('Draw 2');
   draw2Panel.open();
   draw2Panel.addColor(config, 'SolidColors_color2').name('color');
-  draw2Panel.add(config, 'SolidColors_alpha2', 0, 255, 0.001).name('alpha');
+  draw2Panel.add(config, 'SolidColors_alpha2', 0, 100, 0.001).name('alpha %');
 
   const sceneFoliage = scenesPanel.addFolder('Foliage scene options');
   sceneFoliage.open();

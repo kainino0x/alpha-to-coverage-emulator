@@ -2693,7 +2693,6 @@ const kEmulatedAlphaToCoverage = {
     'ARM Mali-G78': `\
     fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
       let i = (xy.y % 2) * 2 + (xy.x % 2);
-      // TODO: this isn't verified yet
       if (alpha <   8 / 256.0) { return ${0b0000}; }
       if (alpha <  24 / 256.0) { return array(${0b0000}u, ${0b1000}, ${0b0000}, ${0b0000})[i]; }
       if (alpha <  40 / 256.0) { return array(${0b0001}u, ${0b1000}, ${0b0000}, ${0b0000})[i]; }
@@ -2806,8 +2805,8 @@ class SolidColors {
     }
     modifyConfigForAnimation(config) {
         // scrub alpha2 over 15 seconds
-        let alpha = ((performance.now() / 15000) % 1) * (255 + 20) - 10;
-        alpha = Math.max(0, Math.min(alpha, 255));
+        let alpha = ((performance.now() / 15000) % 1) * (100 + 10) - 5;
+        alpha = Math.max(0, Math.min(alpha, 100));
         config.SolidColors_alpha2 = alpha;
     }
     applyConfig(config) {
@@ -2816,12 +2815,12 @@ class SolidColors {
             ((config.SolidColors_color1 >> 16) & 0xff) / 255, // R
             ((config.SolidColors_color1 >> 8) & 0xff) / 255, // G
             ((config.SolidColors_color1 >> 0) & 0xff) / 255, // B
-            config.SolidColors_alpha1 / 255,
+            config.SolidColors_alpha1 / 100,
             // instance 1 color
             ((config.SolidColors_color2 >> 16) & 0xff) / 255, // R
             ((config.SolidColors_color2 >> 8) & 0xff) / 255, // G
             ((config.SolidColors_color2 >> 0) & 0xff) / 255, // B
-            config.SolidColors_alpha2 / 255,
+            config.SolidColors_alpha2 / 100,
         ]);
         this.device.queue.writeBuffer(this.bufInstanceColors, 0, data);
         if (this.lastEmulatedDevice !== config.emulatedDevice) {
@@ -8951,7 +8950,7 @@ const kInitConfig = {
     SolidColors_color1: 0x0000ff,
     SolidColors_alpha1: 0,
     SolidColors_color2: 0xff0000,
-    SolidColors_alpha2: 16,
+    SolidColors_alpha2: 6,
     Foliage_cameraRotation: 30,
     animate: true,
 };
@@ -9012,11 +9011,11 @@ gui.width = 300;
     const draw1Panel = sceneSolidColors.addFolder('Draw 1');
     draw1Panel.open();
     draw1Panel.addColor(config, 'SolidColors_color1').name('color');
-    draw1Panel.add(config, 'SolidColors_alpha1', 0, 255).name('alpha');
+    draw1Panel.add(config, 'SolidColors_alpha1', 0, 100, 0.001).name('alpha %');
     const draw2Panel = sceneSolidColors.addFolder('Draw 2');
     draw2Panel.open();
     draw2Panel.addColor(config, 'SolidColors_color2').name('color');
-    draw2Panel.add(config, 'SolidColors_alpha2', 0, 255, 0.001).name('alpha');
+    draw2Panel.add(config, 'SolidColors_alpha2', 0, 100, 0.001).name('alpha %');
     const sceneFoliage = scenesPanel.addFolder('Foliage scene options');
     sceneFoliage.open();
     sceneFoliage

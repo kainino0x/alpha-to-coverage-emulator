@@ -45,7 +45,6 @@ export const kEmulatedAlphaToCoverage = {
   'ARM Mali-G78': `\
     fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
       let i = (xy.y % 2) * 2 + (xy.x % 2);
-      // TODO: this isn't verified yet
       if (alpha <   8 / 256.0) { return ${0b0000}; }
       if (alpha <  24 / 256.0) { return array(${0b0000}u, ${0b1000}, ${0b0000}, ${0b0000})[i]; }
       if (alpha <  40 / 256.0) { return array(${0b0001}u, ${0b1000}, ${0b0000}, ${0b0000})[i]; }
