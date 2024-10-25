@@ -51,7 +51,16 @@ const config = { ...kInitConfig };
 const gui = new GUI();
 gui.width = 300;
 {
+  let isFullscreen = false;
   const buttons = {
+    fullscreen() {
+      if (isFullscreen) {
+        document.exitFullscreen();
+      } else {
+        document.body.requestFullscreen();
+      }
+      isFullscreen = !isFullscreen;
+    },
     foliageDemo() {
       Object.assign(config, kInitConfig);
       gui.updateDisplay();
@@ -81,6 +90,8 @@ gui.width = 300;
       gui.updateDisplay();
     },
   };
+
+  gui.add(buttons, 'fullscreen').name('toggle fullscreen');
 
   const presets = gui.addFolder('Presets');
   presets.open();
