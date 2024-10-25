@@ -2652,7 +2652,7 @@ const fail = (() => {
  * a sample mask.
  */
 const kEmulatedAlphaToCoverage = {
-    'Fake single-sample': `\
+    'Fake 1-sample alpha test': `\
     fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
       if (alpha < 0.5) { return 0; }
       return 0xf;
@@ -2680,7 +2680,7 @@ const kEmulatedAlphaToCoverage = {
       return ${0b1111};
     }
   `.trimEnd(),
-    'NVIDIA GeForce RTX 3070': `\
+    '(?) NVIDIA GeForce RTX 3070': `\
     fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
       // TODO: this isn't verified yet
       if (alpha < 0.5 / 4) { return ${0b0000}; }
@@ -2712,9 +2712,44 @@ const kEmulatedAlphaToCoverage = {
       return ${0b1111};
     }
   `.trimEnd(),
+    '(??) AMD Radeon PRO WX 3200': `\
+    fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
+      let i = (xy.y % 2) * 2 + (xy.x % 2);
+      // TODO: this is probably spaced very incorrectly
+      if (alpha <  1 / 29.0) { return ${0b0000}; }
+      if (alpha <  2 / 29.0) { return array(${0b0100}u, ${0b0000}, ${0b0000}, ${0b0000})[i]; }
+      if (alpha <  3 / 29.0) { return array(${0b0010}u, ${0b0000}, ${0b0000}, ${0b0000})[i]; }
+      if (alpha <  4 / 29.0) { return array(${0b0010}u, ${0b0000}, ${0b0000}, ${0b0100})[i]; }
+      if (alpha <  5 / 29.0) { return array(${0b0001}u, ${0b0000}, ${0b0000}, ${0b0100})[i]; }
+      if (alpha <  6 / 29.0) { return array(${0b0001}u, ${0b0100}, ${0b0000}, ${0b0100})[i]; }
+      if (alpha <  7 / 29.0) { return array(${0b0001}u, ${0b0100}, ${0b0000}, ${0b0010})[i]; }
+      if (alpha <  8 / 29.0) { return array(${0b0001}u, ${0b0100}, ${0b0100}, ${0b0010})[i]; }
+      if (alpha <  9 / 29.0) { return array(${0b0101}u, ${0b0100}, ${0b0100}, ${0b0010})[i]; }
+      if (alpha < 10 / 29.0) { return array(${0b0101}u, ${0b0010}, ${0b0100}, ${0b0010})[i]; }
+      if (alpha < 11 / 29.0) { return array(${0b0101}u, ${0b0010}, ${0b0100}, ${0b0110})[i]; }
+      if (alpha < 12 / 29.0) { return array(${0b0101}u, ${0b0010}, ${0b0100}, ${0b0101})[i]; }
+      if (alpha < 13 / 29.0) { return array(${0b0101}u, ${0b0110}, ${0b0100}, ${0b0101})[i]; }
+      if (alpha < 14 / 29.0) { return array(${0b0101}u, ${0b0110}, ${0b0010}, ${0b0101})[i]; }
+      if (alpha < 15 / 29.0) { return array(${0b0101}u, ${0b0110}, ${0b0110}, ${0b0101})[i]; }
+      if (alpha < 16 / 29.0) { return array(${0b1101}u, ${0b0110}, ${0b0110}, ${0b0101})[i]; }
+      if (alpha < 17 / 29.0) { return array(${0b0111}u, ${0b0110}, ${0b0110}, ${0b0101})[i]; }
+      if (alpha < 18 / 29.0) { return array(${0b0111}u, ${0b0110}, ${0b0110}, ${0b1101})[i]; }
+      if (alpha < 19 / 29.0) { return array(${0b0111}u, ${0b0101}, ${0b0110}, ${0b1101})[i]; }
+      if (alpha < 20 / 29.0) { return array(${0b0111}u, ${0b1101}, ${0b0110}, ${0b1101})[i]; }
+      if (alpha < 21 / 29.0) { return array(${0b0111}u, ${0b1101}, ${0b0110}, ${0b0111})[i]; }
+      if (alpha < 22 / 29.0) { return array(${0b0111}u, ${0b1101}, ${0b1110}, ${0b0111})[i]; }
+      if (alpha < 23 / 29.0) { return array(${0b1111}u, ${0b1101}, ${0b1110}, ${0b0111})[i]; }
+      if (alpha < 24 / 29.0) { return array(${0b1111}u, ${0b0111}, ${0b1110}, ${0b0111})[i]; }
+      if (alpha < 25 / 29.0) { return array(${0b1111}u, ${0b0111}, ${0b1110}, ${0b1111})[i]; }
+      if (alpha < 26 / 29.0) { return array(${0b1111}u, ${0b0111}, ${0b1101}, ${0b1111})[i]; }
+      if (alpha < 27 / 29.0) { return array(${0b1111}u, ${0b1111}, ${0b1101}, ${0b1111})[i]; }
+      if (alpha < 28 / 29.0) { return array(${0b1111}u, ${0b1111}, ${0b0111}, ${0b1111})[i]; }
+      return ${0b1111};
+    }
+  `.trimEnd(),
 };
 
-var solidColorsWGSL = `// Vertex
+var crossingGradientsWGSL = `// Vertex
 
 @vertex
 fn vmain(
@@ -2726,7 +2761,7 @@ fn vmain(
     vec2f( 1, -1), vec2f(-1,  1), vec2f( 1,  1),
   );
 
-  return Varying(vec4(square[vertex_index], 0, 1), color);
+  return Varying(vec4(square[vertex_index % 6], 0, 1), color);
 }
 
 // Varying
@@ -2760,34 +2795,33 @@ fn fmain_emulated(vary: Varying) -> FragOut {
 }
 `;
 
-class SolidColors {
+class CrossingGradients {
     device;
-    bufInstanceColors;
+    bufVertexColors;
     pipelineNative;
     lastEmulatedDevice = null;
     pipelineEmulated = null;
     constructor(device) {
         this.device = device;
-        const solidColorsNativeModule = device.createShaderModule({
-            code: solidColorsWGSL +
+        const crossingGradientsNativeModule = device.createShaderModule({
+            code: crossingGradientsWGSL +
                 // emulatedAlphaToCoverage is not used
                 `fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 { return 0; }`,
         });
         this.pipelineNative = device.createRenderPipeline({
-            label: 'SolidColors with native alpha-to-coverage',
+            label: 'CrossingGradients with native alpha-to-coverage',
             layout: 'auto',
             vertex: {
-                module: solidColorsNativeModule,
+                module: crossingGradientsNativeModule,
                 buffers: [
                     {
-                        stepMode: 'instance',
                         arrayStride: 4 * Float32Array.BYTES_PER_ELEMENT,
                         attributes: [{ shaderLocation: 0, format: 'float32x4', offset: 0 }],
                     },
                 ],
             },
             fragment: {
-                module: solidColorsNativeModule,
+                module: crossingGradientsNativeModule,
                 entryPoint: 'fmain_native',
                 targets: [{ format: 'rgba8unorm' }],
             },
@@ -2798,44 +2832,50 @@ class SolidColors {
             },
             primitive: { topology: 'triangle-list' },
         });
-        this.bufInstanceColors = device.createBuffer({
+        this.bufVertexColors = device.createBuffer({
             usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.VERTEX,
-            size: 2 * 4 * Float32Array.BYTES_PER_ELEMENT,
+            size: 12 * 4 * Float32Array.BYTES_PER_ELEMENT,
         });
     }
     modifyConfigForAnimation(config) {
         // scrub alpha2 over 15 seconds
-        let alpha = ((performance.now() / 15000) % 1) * (100 + 10) - 5;
-        alpha = Math.max(0, Math.min(alpha, 100));
-        config.SolidColors_alpha2 = alpha;
+        const alpha = ((performance.now() / 15000) % 1) * (100 + 10) - 5;
+        config.CrossingGradients_alpha2 = Math.max(0, Math.min(alpha, 100));
     }
     applyConfig(config) {
-        const data = new Float32Array([
-            // instance 0 color
-            ((config.SolidColors_color1 >> 16) & 0xff) / 255, // R
-            ((config.SolidColors_color1 >> 8) & 0xff) / 255, // G
-            ((config.SolidColors_color1 >> 0) & 0xff) / 255, // B
-            config.SolidColors_alpha1 / 100,
-            // instance 1 color
-            ((config.SolidColors_color2 >> 16) & 0xff) / 255, // R
-            ((config.SolidColors_color2 >> 8) & 0xff) / 255, // G
-            ((config.SolidColors_color2 >> 0) & 0xff) / 255, // B
-            config.SolidColors_alpha2 / 100,
+        const c1 = [
+            ((config.CrossingGradients_color1 >> 16) & 0xff) / 255, // R
+            ((config.CrossingGradients_color1 >> 8) & 0xff) / 255, // G
+            ((config.CrossingGradients_color1 >> 0) & 0xff) / 255, // B
+        ];
+        const c2 = [
+            ((config.CrossingGradients_color2 >> 16) & 0xff) / 255, // R
+            ((config.CrossingGradients_color2 >> 8) & 0xff) / 255, // G
+            ((config.CrossingGradients_color2 >> 0) & 0xff) / 255, // B
+        ];
+        const a1b = config.CrossingGradients_alpha1 / 100;
+        const a2b = config.CrossingGradients_alpha2 / 100;
+        const a1a = config.CrossingGradients_gradient ? 0 : a1b;
+        const a2a = config.CrossingGradients_gradient ? 0 : a2b;
+        const dataVertexColors = 
+        /* prettier-ignore */ new Float32Array([
+            ...c1, a1b, ...c1, a1a, ...c1, a1b, ...c1, a1b, ...c1, a1a, ...c1, a1a,
+            ...c2, a2a, ...c2, a2a, ...c2, a2b, ...c2, a2b, ...c2, a2a, ...c2, a2b,
         ]);
-        this.device.queue.writeBuffer(this.bufInstanceColors, 0, data);
+        this.device.queue.writeBuffer(this.bufVertexColors, 0, dataVertexColors);
         if (this.lastEmulatedDevice !== config.emulatedDevice) {
             // Pipeline to render to a multisampled texture using *emulated* alpha-to-coverage
-            const solidColorsEmulatedModule = this.device.createShaderModule({
-                code: solidColorsWGSL + kEmulatedAlphaToCoverage[config.emulatedDevice],
+            const crossingGradientsEmulatedModule = this.device.createShaderModule({
+                code: crossingGradientsWGSL +
+                    kEmulatedAlphaToCoverage[config.emulatedDevice],
             });
             this.pipelineEmulated = this.device.createRenderPipeline({
-                label: 'SolidColors with emulated alpha-to-coverage',
+                label: 'CrossingGradients with emulated alpha-to-coverage',
                 layout: 'auto',
                 vertex: {
-                    module: solidColorsEmulatedModule,
+                    module: crossingGradientsEmulatedModule,
                     buffers: [
                         {
-                            stepMode: 'instance',
                             arrayStride: 4 * Float32Array.BYTES_PER_ELEMENT,
                             attributes: [
                                 { shaderLocation: 0, format: 'float32x4', offset: 0 },
@@ -2844,7 +2884,7 @@ class SolidColors {
                     ],
                 },
                 fragment: {
-                    module: solidColorsEmulatedModule,
+                    module: crossingGradientsEmulatedModule,
                     entryPoint: 'fmain_emulated',
                     targets: [{ format: 'rgba8unorm' }],
                 },
@@ -2860,17 +2900,57 @@ class SolidColors {
     }
     render(pass, emulated) {
         pass.setPipeline(emulated ? this.pipelineEmulated : this.pipelineNative);
-        pass.setVertexBuffer(0, this.bufInstanceColors);
-        pass.draw(6, 2);
+        pass.setVertexBuffer(0, this.bufVertexColors);
+        pass.draw(12);
     }
 }
 
-var leafWGSL = `// TODO: deduplicate code with Foliage.wgsl?
+var foliageWGSL = `// Vertex
 
-// Vertex
+struct Uniforms {
+  viewProj: mat4x4f,
+};
+@binding(0) @group(0) var<uniform> uniforms: Uniforms;
+
+// Roughly evenly space leaves in a circle using this constant
+const kPi: f32 = 3.14159265359;
+const kPhi: f32 = 1.618033988749;
+
+fn rotate(a: f32, b: f32, c: f32) -> mat3x3f {
+  let t = a % (2 * kPi);
+  let u = b % (kPi / 2);
+  let v = c % (kPi / 2) - kPi / 4;
+  // low-effort (inefficient) rotation matrix implementation
+  return 
+    // 3. third rotate the leaf around up to 360deg
+    mat3x3f(cos(t), 0, -sin(t), 0, 1, 0, sin(t), 0, cos(t)) *
+    // 2. second rotate the leaf toward the horizon up to 90deg
+    mat3x3f(cos(u), sin(u), 0, -sin(u), cos(u), 0, 0, 0, 1) *
+    // 1. first rotate the leaf on axis -45 to 45 degrees
+    mat3x3f(cos(v), 0, -sin(v), 0, 1, 0, sin(v), 0, cos(v));
+    // 0. leaf starts raised above the origin
+}
 
 @vertex
-fn vmain(
+fn vmainFoliage(
+  @builtin(vertex_index) vertex_index: u32,
+  @builtin(instance_index) instance_index: u32,
+) -> Varying {
+  var square = array(
+    vec2f(-1, -1), vec2f(-1,  1), vec2f( 1, -1),
+    vec2f( 1, -1), vec2f(-1,  1), vec2f( 1,  1),
+  );
+
+  let uv = square[vertex_index];
+  let leafSpacePos = vec3f(uv * 0.25, 0);
+  let t = kPhi * f32(instance_index);
+  // Low-effort leaf spacing
+  let worldSpacePos = rotate(t * 3, t * 7, t * 11) * (leafSpacePos + vec3f(0, t % 5, 0));
+  return Varying(uniforms.viewProj * vec4f(worldSpacePos, 1), uv);
+}
+
+@vertex
+fn vmainLeaf(
   @builtin(vertex_index) vertex_index: u32,
 ) -> Varying {
   var square = array(
@@ -2891,14 +2971,17 @@ struct Varying {
 
 // Fragment helpers
 
-// TODO: This is NOT the appropriate way to produce alpha for alpha-to-coverage.
-// Need to update it to do what's described in the article.
 fn uvToAlpha(uv: vec2f) -> f32 {
-  return clamp((1 - length(uv)) / 0.2, 0, 1);
+  let kRadius = 1.0;
+  // t is a signed distance field which is >1 inside the circle and <1 outside.
+  let t = kRadius - length(uv);
+  // The return value "sharpens" the gradient so it's 1 pixel wide.
+  return clamp(t / max(fwidth(t), 0.0001), 0, 1);
 }
 
 fn uvToColor(uv: vec2f) -> vec3f {
-  let g = 0.3 + 0.3 * (uv.x + 1);
+  let t = (uv.x + 1) / 2; // range 0..1
+  let g = 0.7 * t;
   return vec3f(0, g, 1 - g);
 }
 
@@ -2932,18 +3015,19 @@ class Leaf {
     pipelineEmulated = null;
     constructor(device) {
         this.device = device;
-        const solidColorsNativeModule = device.createShaderModule({
-            code: leafWGSL +
+        const crossingGradientsNativeModule = device.createShaderModule({
+            code: foliageWGSL +
                 `fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 { return 0; }`,
         });
         this.pipelineNative = device.createRenderPipeline({
             label: 'Leaf with emulated alpha-to-coverage',
             layout: 'auto',
             vertex: {
-                module: solidColorsNativeModule,
+                module: crossingGradientsNativeModule,
+                entryPoint: 'vmainLeaf',
             },
             fragment: {
-                module: solidColorsNativeModule,
+                module: crossingGradientsNativeModule,
                 entryPoint: 'fmain_native',
                 targets: [{ format: 'rgba8unorm' }],
             },
@@ -2960,15 +3044,18 @@ class Leaf {
     applyConfig(config) {
         if (this.lastEmulatedDevice !== config.emulatedDevice) {
             // Pipeline to render to a multisampled texture using *emulated* alpha-to-coverage
-            const solidColorsEmulatedModule = this.device.createShaderModule({
-                code: leafWGSL + kEmulatedAlphaToCoverage[config.emulatedDevice],
+            const crossingGradientsEmulatedModule = this.device.createShaderModule({
+                code: foliageWGSL + kEmulatedAlphaToCoverage[config.emulatedDevice],
             });
             this.pipelineEmulated = this.device.createRenderPipeline({
                 label: 'Leaf with native alpha-to-coverage',
                 layout: 'auto',
-                vertex: { module: solidColorsEmulatedModule },
+                vertex: {
+                    module: crossingGradientsEmulatedModule,
+                    entryPoint: 'vmainLeaf',
+                },
                 fragment: {
-                    module: solidColorsEmulatedModule,
+                    module: crossingGradientsEmulatedModule,
                     entryPoint: 'fmain_emulated',
                     targets: [{ format: 'rgba8unorm' }],
                 },
@@ -8740,93 +8827,6 @@ vec4, } = wgpuMatrixAPI(Float32Array, Float32Array, Float32Array, Float32Array, 
 wgpuMatrixAPI(Float64Array, Float64Array, Float64Array, Float64Array, Float64Array, Float64Array);
 wgpuMatrixAPI(ZeroArray, Array, Array, Array, Array, Array);
 
-var foliageWGSL = `// Vertex
-
-struct Uniforms {
-  viewProj: mat4x4f,
-};
-@binding(0) @group(0) var<uniform> uniforms: Uniforms;
-
-// Roughly evenly space leaves in a circle using this constant
-const kPi: f32 = 3.14159265359;
-const kPhi: f32 = 1.618033988749;
-
-fn rotate(a: f32, b: f32, c: f32) -> mat3x3f {
-  let t = a % (2 * kPi);
-  let u = b % (kPi / 2);
-  let v = c % (kPi / 2) - kPi / 4;
-  // low-effort (inefficient) rotation matrix implementation
-  return 
-    // 3. third rotate the leaf around up to 360deg
-    mat3x3f(cos(t), 0, -sin(t), 0, 1, 0, sin(t), 0, cos(t)) *
-    // 2. second rotate the leaf toward the horizon up to 90deg
-    mat3x3f(cos(u), sin(u), 0, -sin(u), cos(u), 0, 0, 0, 1) *
-    // 1. first rotate the leaf on axis -45 to 45 degrees
-    mat3x3f(cos(v), 0, -sin(v), 0, 1, 0, sin(v), 0, cos(v));
-    // 0. leaf starts raised above the origin
-}
-
-@vertex
-fn vmain(
-  @builtin(vertex_index) vertex_index: u32,
-  @builtin(instance_index) instance_index: u32,
-) -> Varying {
-  var square = array(
-    vec2f(-1, -1), vec2f(-1,  1), vec2f( 1, -1),
-    vec2f( 1, -1), vec2f(-1,  1), vec2f( 1,  1),
-  );
-
-  let uv = square[vertex_index];
-  let leafSpacePos = vec3f(uv * 0.25, 0);
-  let t = kPhi * f32(instance_index);
-  // Low-effort leaf spacing
-  let worldSpacePos = rotate(t * 3, t * 7, t * 11) * (leafSpacePos + vec3f(0, t % 5, 0));
-  return Varying(uniforms.viewProj * vec4f(worldSpacePos, 1), uv);
-}
-
-// Varying
-
-struct Varying {
-  @builtin(position) pos: vec4f,
-  @location(0) uv: vec2f,
-}
-
-// Fragment helpers
-
-// TODO: This is NOT the appropriate way to produce alpha for alpha-to-coverage.
-// Need to update it to do what's described in the article.
-fn uvToAlpha(uv: vec2f) -> f32 {
-  return clamp((1 - length(uv)) / 0.2, 0, 1);
-}
-
-fn uvToColor(uv: vec2f) -> vec3f {
-  let g = 0.3 + 0.3 * (uv.x + 1);
-  return vec3f(0, g, 1 - g);
-}
-
-// Fragment (native alpha-to-coverage)
-
-@fragment
-fn fmain_native(vary: Varying) -> @location(0) vec4f {
-  return vec4f(uvToColor(vary.uv), uvToAlpha(vary.uv));
-}
-
-// Fragment (emulated alpha-to-coverage)
-
-struct FragOut {
-  @location(0) color: vec4f,
-  @builtin(sample_mask) mask: u32,
-}
-
-@fragment
-fn fmain_emulated(vary: Varying) -> FragOut {
-  // emulatedAlphaToCoverage comes from emulatedAlphaToCoverage.ts depending
-  // on the emulation mode.
-  let mask = emulatedAlphaToCoverage(uvToAlpha(vary.uv), vec2u(vary.pos.xy));
-  return FragOut(vec4f(uvToColor(vary.uv), 1), mask);
-}
-`;
-
 class Foliage {
     device;
     pipelineLayout;
@@ -8843,7 +8843,7 @@ class Foliage {
         this.pipelineLayout = device.createPipelineLayout({
             bindGroupLayouts: [bgl],
         });
-        const solidColorsNativeModule = device.createShaderModule({
+        const crossingGradientsNativeModule = device.createShaderModule({
             code: foliageWGSL +
                 `fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 { return 0; }`,
         });
@@ -8851,10 +8851,11 @@ class Foliage {
             label: 'Foliage with emulated alpha-to-coverage',
             layout: this.pipelineLayout,
             vertex: {
-                module: solidColorsNativeModule,
+                module: crossingGradientsNativeModule,
+                entryPoint: 'vmainFoliage',
             },
             fragment: {
-                module: solidColorsNativeModule,
+                module: crossingGradientsNativeModule,
                 entryPoint: 'fmain_native',
                 targets: [{ format: 'rgba8unorm' }],
             },
@@ -8882,15 +8883,18 @@ class Foliage {
         this.device.queue.writeBuffer(this.uniformBuffer, 0, getViewProjMatrix((config.Foliage_cameraRotation / 180) * Math.PI));
         if (this.lastEmulatedDevice !== config.emulatedDevice) {
             // Pipeline to render to a multisampled texture using *emulated* alpha-to-coverage
-            const solidColorsEmulatedModule = this.device.createShaderModule({
+            const crossingGradientsEmulatedModule = this.device.createShaderModule({
                 code: foliageWGSL + kEmulatedAlphaToCoverage[config.emulatedDevice],
             });
             this.pipelineEmulated = this.device.createRenderPipeline({
                 label: 'Foliage with native alpha-to-coverage',
                 layout: this.pipelineLayout,
-                vertex: { module: solidColorsEmulatedModule },
+                vertex: {
+                    module: crossingGradientsEmulatedModule,
+                    entryPoint: 'vmainFoliage',
+                },
                 fragment: {
-                    module: solidColorsEmulatedModule,
+                    module: crossingGradientsEmulatedModule,
                     entryPoint: 'fmain_emulated',
                     targets: [{ format: 'rgba8unorm' }],
                 },
@@ -8932,26 +8936,27 @@ quitIfWebGPUNotAvailable(adapter, device);
 // Scene initialization
 //
 const scenes = {
-    SolidColors: new SolidColors(device),
+    CrossingGradients: new CrossingGradients(device),
     Leaf: new Leaf(device),
     Foliage: new Foliage(device),
 };
 //
 // GUI controls
 //
-const kSceneNames = ['SolidColors', 'Leaf', 'Foliage'];
+const kSceneNames = ['CrossingGradients', 'Leaf', 'Foliage'];
 const kInitConfig = {
     scene: 'Foliage',
-    emulatedDevice: 'Apple M1 Pro',
+    emulatedDevice: 'Fake 1-sample alpha test',
     largeDotEmulate: false,
-    smallDotEmulate: false,
+    showComparisonDot: false,
     sizeLog2: 8,
     showResolvedColor: true,
-    SolidColors_color1: 0x0000ff,
-    SolidColors_alpha1: 0,
-    SolidColors_color2: 0xff0000,
-    SolidColors_alpha2: 6,
-    Foliage_cameraRotation: 30,
+    CrossingGradients_gradient: true,
+    CrossingGradients_color1: 0xffffff,
+    CrossingGradients_alpha1: 0,
+    CrossingGradients_color2: 0x0000ff,
+    CrossingGradients_alpha2: 5,
+    Foliage_cameraRotation: 0,
     animate: true,
 };
 const config = { ...kInitConfig };
@@ -8967,55 +8972,67 @@ gui.width = 300;
             Object.assign(config, kInitConfig);
             (config.scene = 'Leaf'), (config.sizeLog2 = 7);
             config.largeDotEmulate = true;
-            config.smallDotEmulate = true;
             gui.updateDisplay();
         },
-        patternInspector() {
+        solidInspector() {
             Object.assign(config, kInitConfig);
-            (config.scene = 'SolidColors'), (config.sizeLog2 = 3);
+            config.scene = 'CrossingGradients';
+            config.sizeLog2 = 3;
+            config.animate = true;
+            config.CrossingGradients_gradient = false;
             gui.updateDisplay();
         },
-        patternInspectorEmulated() {
-            this.patternInspector();
-            config.largeDotEmulate = true;
-            config.smallDotEmulate = true;
+        gradientInspector() {
+            Object.assign(config, kInitConfig);
+            config.scene = 'CrossingGradients';
+            config.sizeLog2 = 3;
+            config.animate = false;
+            config.CrossingGradients_gradient = true;
+            config.CrossingGradients_alpha1 = 100;
+            config.CrossingGradients_alpha2 = 100;
+            gui.updateDisplay();
         },
     };
     const presets = gui.addFolder('Presets');
     presets.open();
     presets.add(buttons, 'foliageDemo').name('foliage demo (default)');
     presets.add(buttons, 'leafEmulated').name('leaf closeup (emulated) ');
-    presets.add(buttons, 'patternInspector').name('pattern inspector');
-    presets
-        .add(buttons, 'patternInspectorEmulated')
-        .name('pattern inspector (emulated)');
+    presets.add(buttons, 'solidInspector').name('solid pattern inspector');
+    presets.add(buttons, 'gradientInspector').name('gradient inspector');
     const visualizationPanel = gui.addFolder('Visualization');
     visualizationPanel.open();
     visualizationPanel.add(config, 'sizeLog2', 0, 9, 1).name('size = 2**');
+    visualizationPanel.add(config, 'showResolvedColor', false);
     visualizationPanel
         .add(config, 'emulatedDevice', Object.keys(kEmulatedAlphaToCoverage))
         .name('device to emulate');
-    const largeDotPanel = visualizationPanel.addFolder('Primary (large outer dot, used for resolve)');
-    largeDotPanel.open();
-    largeDotPanel.add(config, 'largeDotEmulate', false).name('emulated');
-    largeDotPanel.add(config, 'showResolvedColor', false);
-    const smallDotPanel = visualizationPanel.addFolder('Reference (small inner dot, for visual comparison)');
-    smallDotPanel.open();
-    smallDotPanel.add(config, 'smallDotEmulate', false).name('emulated');
+    visualizationPanel
+        .add(config, 'largeDotEmulate', false)
+        .name('<code>emulate</code>');
+    visualizationPanel
+        .add(config, 'showComparisonDot', false)
+        .name('compare <code>!emulate</code>');
     const scenesPanel = gui.addFolder('Scenes');
     scenesPanel.open();
     scenesPanel.add(config, 'scene', kSceneNames);
     scenesPanel.add(config, 'animate', false);
-    const sceneSolidColors = scenesPanel.addFolder('SolidColors scene options');
-    sceneSolidColors.open();
-    const draw1Panel = sceneSolidColors.addFolder('Draw 1');
+    const sceneCrossingGradients = scenesPanel.addFolder('CrossingGradients scene options');
+    sceneCrossingGradients.open();
+    sceneCrossingGradients
+        .add(config, 'CrossingGradients_gradient', true)
+        .name('use gradient');
+    const draw1Panel = sceneCrossingGradients.addFolder('Draw 1 (top->bottom)');
     draw1Panel.open();
-    draw1Panel.addColor(config, 'SolidColors_color1').name('color');
-    draw1Panel.add(config, 'SolidColors_alpha1', 0, 100, 0.001).name('alpha %');
-    const draw2Panel = sceneSolidColors.addFolder('Draw 2');
+    draw1Panel.addColor(config, 'CrossingGradients_color1').name('color');
+    draw1Panel
+        .add(config, 'CrossingGradients_alpha1', 0, 100, 0.001)
+        .name('alpha %');
+    const draw2Panel = sceneCrossingGradients.addFolder('Draw 2 (left->right)');
     draw2Panel.open();
-    draw2Panel.addColor(config, 'SolidColors_color2').name('color');
-    draw2Panel.add(config, 'SolidColors_alpha2', 0, 100, 0.001).name('alpha %');
+    draw2Panel.addColor(config, 'CrossingGradients_color2').name('color');
+    draw2Panel
+        .add(config, 'CrossingGradients_alpha2', 0, 100, 0.001)
+        .name('alpha %');
     const sceneFoliage = scenesPanel.addFolder('Foliage scene options');
     sceneFoliage.open();
     sceneFoliage
@@ -9189,7 +9206,7 @@ function render() {
                 depthStoreOp: 'discard',
             },
         });
-        scenes[config.scene].render(pass, config.smallDotEmulate);
+        scenes[config.scene].render(pass, config.largeDotEmulate /* xor */ !== config.showComparisonDot);
         pass.end();
     }
     // showMultisampleTexture pass

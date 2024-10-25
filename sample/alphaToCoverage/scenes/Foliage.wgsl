@@ -25,7 +25,7 @@ fn rotate(a: f32, b: f32, c: f32) -> mat3x3f {
 }
 
 @vertex
-fn vmain(
+fn vmainFoliage(
   @builtin(vertex_index) vertex_index: u32,
   @builtin(instance_index) instance_index: u32,
 ) -> Varying {
@@ -42,6 +42,19 @@ fn vmain(
   return Varying(uniforms.viewProj * vec4f(worldSpacePos, 1), uv);
 }
 
+@vertex
+fn vmainLeaf(
+  @builtin(vertex_index) vertex_index: u32,
+) -> Varying {
+  var square = array(
+    vec2f(-1, -1), vec2f(-1,  1), vec2f( 1, -1),
+    vec2f( 1, -1), vec2f(-1,  1), vec2f( 1,  1),
+  );
+
+  let pos = square[vertex_index];
+  return Varying(vec4(pos, 0, 1), pos);
+}
+
 // Varying
 
 struct Varying {
@@ -51,14 +64,17 @@ struct Varying {
 
 // Fragment helpers
 
-// TODO: This is NOT the appropriate way to produce alpha for alpha-to-coverage.
-// Need to update it to do what's described in the article.
 fn uvToAlpha(uv: vec2f) -> f32 {
-  return clamp((1 - length(uv)) / 0.2, 0, 1);
+  let kRadius = 1.0;
+  // t is a signed distance field which is >1 inside the circle and <1 outside.
+  let t = kRadius - length(uv);
+  // The return value "sharpens" the gradient so it's 1 pixel wide.
+  return clamp(t / max(fwidth(t), 0.0001), 0, 1);
 }
 
 fn uvToColor(uv: vec2f) -> vec3f {
-  let g = 0.3 + 0.3 * (uv.x + 1);
+  let t = (uv.x + 1) / 2; // range 0..1
+  let g = 0.7 * t;
   return vec3f(0, g, 1 - g);
 }
 

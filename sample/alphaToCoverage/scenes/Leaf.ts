@@ -1,6 +1,6 @@
 import { Config } from '../main';
 import { kEmulatedAlphaToCoverage } from '../emulatedAlphaToCoverage';
-import leafWGSL from './Leaf.wgsl';
+import foliageWGSL from './Foliage.wgsl';
 
 export class Leaf {
   private readonly pipelineNative: GPURenderPipeline;
@@ -8,9 +8,9 @@ export class Leaf {
   private pipelineEmulated: GPURenderPipeline | null = null;
 
   constructor(private device: GPUDevice) {
-    const solidColorsNativeModule = device.createShaderModule({
+    const crossingGradientsNativeModule = device.createShaderModule({
       code:
-        leafWGSL +
+        foliageWGSL +
         `fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 { return 0; }`,
     });
 
@@ -18,10 +18,11 @@ export class Leaf {
       label: 'Leaf with emulated alpha-to-coverage',
       layout: 'auto',
       vertex: {
-        module: solidColorsNativeModule,
+        module: crossingGradientsNativeModule,
+        entryPoint: 'vmainLeaf',
       },
       fragment: {
-        module: solidColorsNativeModule,
+        module: crossingGradientsNativeModule,
         entryPoint: 'fmain_native',
         targets: [{ format: 'rgba8unorm' }],
       },
@@ -40,15 +41,18 @@ export class Leaf {
   applyConfig(config: Config) {
     if (this.lastEmulatedDevice !== config.emulatedDevice) {
       // Pipeline to render to a multisampled texture using *emulated* alpha-to-coverage
-      const solidColorsEmulatedModule = this.device.createShaderModule({
-        code: leafWGSL + kEmulatedAlphaToCoverage[config.emulatedDevice],
+      const crossingGradientsEmulatedModule = this.device.createShaderModule({
+        code: foliageWGSL + kEmulatedAlphaToCoverage[config.emulatedDevice],
       });
       this.pipelineEmulated = this.device.createRenderPipeline({
         label: 'Leaf with native alpha-to-coverage',
         layout: 'auto',
-        vertex: { module: solidColorsEmulatedModule },
+        vertex: {
+          module: crossingGradientsEmulatedModule,
+          entryPoint: 'vmainLeaf',
+        },
         fragment: {
-          module: solidColorsEmulatedModule,
+          module: crossingGradientsEmulatedModule,
           entryPoint: 'fmain_emulated',
           targets: [{ format: 'rgba8unorm' }],
         },

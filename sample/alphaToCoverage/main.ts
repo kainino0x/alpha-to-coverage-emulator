@@ -4,7 +4,7 @@ import showMultisampleTextureWGSL from './showMultisampleTexture.wgsl';
 import { quitIfWebGPUNotAvailable } from '../util';
 import { kEmulatedAlphaToCoverage } from './emulatedAlphaToCoverage';
 
-import { SolidColors } from './scenes/SolidColors';
+import { CrossingGradients } from './scenes/CrossingGradients';
 import { Leaf } from './scenes/Leaf';
 import { Foliage } from './scenes/Foliage';
 
@@ -18,7 +18,7 @@ quitIfWebGPUNotAvailable(adapter, device);
 //
 
 const scenes = {
-  SolidColors: new SolidColors(device),
+  CrossingGradients: new CrossingGradients(device),
   Leaf: new Leaf(device),
   Foliage: new Foliage(device),
 };
@@ -27,21 +27,22 @@ const scenes = {
 // GUI controls
 //
 
-const kSceneNames = ['SolidColors', 'Leaf', 'Foliage'] as const;
+const kSceneNames = ['CrossingGradients', 'Leaf', 'Foliage'] as const;
 type DeviceName = keyof typeof kEmulatedAlphaToCoverage;
 
 const kInitConfig = {
   scene: 'Foliage' as (typeof kSceneNames)[number],
-  emulatedDevice: 'Apple M1 Pro' as DeviceName,
+  emulatedDevice: 'Fake 1-sample alpha test' as DeviceName,
   largeDotEmulate: false,
-  smallDotEmulate: false,
+  showComparisonDot: false,
   sizeLog2: 8,
   showResolvedColor: true,
-  SolidColors_color1: 0x0000ff,
-  SolidColors_alpha1: 0,
-  SolidColors_color2: 0xff0000,
-  SolidColors_alpha2: 6,
-  Foliage_cameraRotation: 30,
+  CrossingGradients_gradient: true,
+  CrossingGradients_color1: 0xffffff,
+  CrossingGradients_alpha1: 0,
+  CrossingGradients_color2: 0x0000ff,
+  CrossingGradients_alpha2: 5,
+  Foliage_cameraRotation: 0,
   animate: true,
 };
 export type Config = typeof kInitConfig;
@@ -59,18 +60,25 @@ gui.width = 300;
       Object.assign(config, kInitConfig);
       (config.scene = 'Leaf'), (config.sizeLog2 = 7);
       config.largeDotEmulate = true;
-      config.smallDotEmulate = true;
       gui.updateDisplay();
     },
-    patternInspector() {
+    solidInspector() {
       Object.assign(config, kInitConfig);
-      (config.scene = 'SolidColors'), (config.sizeLog2 = 3);
+      config.scene = 'CrossingGradients';
+      config.sizeLog2 = 3;
+      config.animate = true;
+      config.CrossingGradients_gradient = false;
       gui.updateDisplay();
     },
-    patternInspectorEmulated() {
-      this.patternInspector();
-      config.largeDotEmulate = true;
-      config.smallDotEmulate = true;
+    gradientInspector() {
+      Object.assign(config, kInitConfig);
+      config.scene = 'CrossingGradients';
+      config.sizeLog2 = 3;
+      config.animate = false;
+      config.CrossingGradients_gradient = true;
+      config.CrossingGradients_alpha1 = 100;
+      config.CrossingGradients_alpha2 = 100;
+      gui.updateDisplay();
     },
   };
 
@@ -78,48 +86,49 @@ gui.width = 300;
   presets.open();
   presets.add(buttons, 'foliageDemo').name('foliage demo (default)');
   presets.add(buttons, 'leafEmulated').name('leaf closeup (emulated) ');
-  presets.add(buttons, 'patternInspector').name('pattern inspector');
-  presets
-    .add(buttons, 'patternInspectorEmulated')
-    .name('pattern inspector (emulated)');
+  presets.add(buttons, 'solidInspector').name('solid pattern inspector');
+  presets.add(buttons, 'gradientInspector').name('gradient inspector');
 
   const visualizationPanel = gui.addFolder('Visualization');
   visualizationPanel.open();
   visualizationPanel.add(config, 'sizeLog2', 0, 9, 1).name('size = 2**');
+  visualizationPanel.add(config, 'showResolvedColor', false);
   visualizationPanel
     .add(config, 'emulatedDevice', Object.keys(kEmulatedAlphaToCoverage))
     .name('device to emulate');
-
-  const largeDotPanel = visualizationPanel.addFolder(
-    'Primary (large outer dot, used for resolve)'
-  );
-  largeDotPanel.open();
-  largeDotPanel.add(config, 'largeDotEmulate', false).name('emulated');
-  largeDotPanel.add(config, 'showResolvedColor', false);
-
-  const smallDotPanel = visualizationPanel.addFolder(
-    'Reference (small inner dot, for visual comparison)'
-  );
-  smallDotPanel.open();
-  smallDotPanel.add(config, 'smallDotEmulate', false).name('emulated');
+  visualizationPanel
+    .add(config, 'largeDotEmulate', false)
+    .name('<code>emulate</code>');
+  visualizationPanel
+    .add(config, 'showComparisonDot', false)
+    .name('compare <code>!emulate</code>');
 
   const scenesPanel = gui.addFolder('Scenes');
   scenesPanel.open();
   scenesPanel.add(config, 'scene', kSceneNames);
   scenesPanel.add(config, 'animate', false);
 
-  const sceneSolidColors = scenesPanel.addFolder('SolidColors scene options');
-  sceneSolidColors.open();
+  const sceneCrossingGradients = scenesPanel.addFolder(
+    'CrossingGradients scene options'
+  );
+  sceneCrossingGradients.open();
+  sceneCrossingGradients
+    .add(config, 'CrossingGradients_gradient', true)
+    .name('use gradient');
 
-  const draw1Panel = sceneSolidColors.addFolder('Draw 1');
+  const draw1Panel = sceneCrossingGradients.addFolder('Draw 1 (top->bottom)');
   draw1Panel.open();
-  draw1Panel.addColor(config, 'SolidColors_color1').name('color');
-  draw1Panel.add(config, 'SolidColors_alpha1', 0, 100, 0.001).name('alpha %');
+  draw1Panel.addColor(config, 'CrossingGradients_color1').name('color');
+  draw1Panel
+    .add(config, 'CrossingGradients_alpha1', 0, 100, 0.001)
+    .name('alpha %');
 
-  const draw2Panel = sceneSolidColors.addFolder('Draw 2');
+  const draw2Panel = sceneCrossingGradients.addFolder('Draw 2 (left->right)');
   draw2Panel.open();
-  draw2Panel.addColor(config, 'SolidColors_color2').name('color');
-  draw2Panel.add(config, 'SolidColors_alpha2', 0, 100, 0.001).name('alpha %');
+  draw2Panel.addColor(config, 'CrossingGradients_color2').name('color');
+  draw2Panel
+    .add(config, 'CrossingGradients_alpha2', 0, 100, 0.001)
+    .name('alpha %');
 
   const sceneFoliage = scenesPanel.addFolder('Foliage scene options');
   sceneFoliage.open();
@@ -313,7 +322,10 @@ function render() {
         depthStoreOp: 'discard',
       },
     });
-    scenes[config.scene].render(pass, config.smallDotEmulate);
+    scenes[config.scene].render(
+      pass,
+      config.largeDotEmulate /* xor */ !== config.showComparisonDot
+    );
     pass.end();
   }
   // showMultisampleTexture pass
