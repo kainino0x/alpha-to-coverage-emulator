@@ -29,6 +29,7 @@ export class Foliage {
       layout: this.pipelineLayout,
       vertex: {
         module: solidColorsNativeModule,
+        entryPoint: 'vmainFoliage',
       },
       fragment: {
         module: solidColorsNativeModule,
@@ -73,7 +74,10 @@ export class Foliage {
       this.pipelineEmulated = this.device.createRenderPipeline({
         label: 'Foliage with native alpha-to-coverage',
         layout: this.pipelineLayout,
-        vertex: { module: solidColorsEmulatedModule },
+        vertex: {
+          module: solidColorsEmulatedModule,
+          entryPoint: 'vmainFoliage',
+        },
         fragment: {
           module: solidColorsEmulatedModule,
           entryPoint: 'fmain_emulated',

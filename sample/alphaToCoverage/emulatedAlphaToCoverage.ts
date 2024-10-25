@@ -4,7 +4,7 @@
  * a sample mask.
  */
 export const kEmulatedAlphaToCoverage = {
-  'Fake single-sample': `\
+  'Fake alpha test (vs 0.5)': `\
     fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
       if (alpha < 0.5) { return 0; }
       return 0xf;

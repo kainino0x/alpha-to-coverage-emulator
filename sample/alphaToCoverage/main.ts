@@ -40,8 +40,8 @@ const kInitConfig = {
   SolidColors_color1: 0x0000ff,
   SolidColors_alpha1: 0,
   SolidColors_color2: 0xff0000,
-  SolidColors_alpha2: 6,
-  Foliage_cameraRotation: 30,
+  SolidColors_alpha2: 5,
+  Foliage_cameraRotation: 0,
   animate: true,
 };
 export type Config = typeof kInitConfig;

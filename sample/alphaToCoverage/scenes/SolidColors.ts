@@ -49,9 +49,9 @@ export class SolidColors {
 
   modifyConfigForAnimation(config: Config) {
     // scrub alpha2 over 15 seconds
-    let alpha = ((performance.now() / 15000) % 1) * (100 + 10) - 5;
-    alpha = Math.max(0, Math.min(alpha, 100));
-    config.SolidColors_alpha2 = alpha;
+    let alpha = ((performance.now() / 15000) % 1) * (100 + 15) - 10;
+    config.SolidColors_alpha1 = Math.max(0, Math.min(alpha, 100));
+    config.SolidColors_alpha2 = Math.max(0, Math.min(alpha + 5, 100));
   }
 
   applyConfig(config: Config) {
