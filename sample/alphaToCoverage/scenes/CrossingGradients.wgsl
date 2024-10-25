@@ -10,7 +10,7 @@ fn vmain(
     vec2f( 1, -1), vec2f(-1,  1), vec2f( 1,  1),
   );
 
-  return Varying(vec4(square[vertex_index], 0, 1), color);
+  return Varying(vec4(square[vertex_index % 6], 0, 1), color);
 }
 
 // Varying

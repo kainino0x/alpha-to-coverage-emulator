@@ -19,7 +19,7 @@ export class Foliage {
       bindGroupLayouts: [bgl],
     });
 
-    const solidColorsNativeModule = device.createShaderModule({
+    const crossingGradientsNativeModule = device.createShaderModule({
       code:
         foliageWGSL +
         `fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 { return 0; }`,
@@ -28,11 +28,11 @@ export class Foliage {
       label: 'Foliage with emulated alpha-to-coverage',
       layout: this.pipelineLayout,
       vertex: {
-        module: solidColorsNativeModule,
+        module: crossingGradientsNativeModule,
         entryPoint: 'vmainFoliage',
       },
       fragment: {
-        module: solidColorsNativeModule,
+        module: crossingGradientsNativeModule,
         entryPoint: 'fmain_native',
         targets: [{ format: 'rgba8unorm' }],
       },
@@ -68,18 +68,18 @@ export class Foliage {
 
     if (this.lastEmulatedDevice !== config.emulatedDevice) {
       // Pipeline to render to a multisampled texture using *emulated* alpha-to-coverage
-      const solidColorsEmulatedModule = this.device.createShaderModule({
+      const crossingGradientsEmulatedModule = this.device.createShaderModule({
         code: foliageWGSL + kEmulatedAlphaToCoverage[config.emulatedDevice],
       });
       this.pipelineEmulated = this.device.createRenderPipeline({
         label: 'Foliage with native alpha-to-coverage',
         layout: this.pipelineLayout,
         vertex: {
-          module: solidColorsEmulatedModule,
+          module: crossingGradientsEmulatedModule,
           entryPoint: 'vmainFoliage',
         },
         fragment: {
-          module: solidColorsEmulatedModule,
+          module: crossingGradientsEmulatedModule,
           entryPoint: 'fmain_emulated',
           targets: [{ format: 'rgba8unorm' }],
         },
