@@ -56,10 +56,20 @@ gui.width = 300;
       Object.assign(config, kInitConfig);
       gui.updateDisplay();
     },
-    leafEmulated() {
+    leaf() {
       Object.assign(config, kInitConfig);
-      (config.scene = 'Leaf'), (config.sizeLog2 = 7);
-      config.largeDotEmulate = true;
+      config.scene = 'Leaf';
+      config.sizeLog2 = 7;
+      gui.updateDisplay();
+    },
+    overlappingGradients() {
+      Object.assign(config, kInitConfig);
+      config.scene = 'CrossingGradients';
+      config.sizeLog2 = 8;
+      config.animate = false;
+      config.CrossingGradients_gradient = true;
+      config.CrossingGradients_alpha1 = 100;
+      config.CrossingGradients_alpha2 = 100;
       gui.updateDisplay();
     },
     solidInspector() {
@@ -70,24 +80,14 @@ gui.width = 300;
       config.CrossingGradients_gradient = false;
       gui.updateDisplay();
     },
-    gradientInspector() {
-      Object.assign(config, kInitConfig);
-      config.scene = 'CrossingGradients';
-      config.sizeLog2 = 3;
-      config.animate = false;
-      config.CrossingGradients_gradient = true;
-      config.CrossingGradients_alpha1 = 100;
-      config.CrossingGradients_alpha2 = 100;
-      gui.updateDisplay();
-    },
   };
 
   const presets = gui.addFolder('Presets');
   presets.open();
   presets.add(buttons, 'foliageDemo').name('foliage demo (default)');
-  presets.add(buttons, 'leafEmulated').name('leaf closeup (emulated) ');
+  presets.add(buttons, 'leaf').name('leaf closeup (emulated) ');
+  presets.add(buttons, 'overlappingGradients').name('overlapping gradients');
   presets.add(buttons, 'solidInspector').name('solid pattern inspector');
-  presets.add(buttons, 'gradientInspector').name('gradient inspector');
 
   const visualizationPanel = gui.addFolder('Visualization');
   visualizationPanel.open();
