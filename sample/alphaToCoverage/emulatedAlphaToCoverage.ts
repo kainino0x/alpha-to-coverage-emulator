@@ -4,12 +4,6 @@
  * a sample mask.
  */
 export const kEmulatedAlphaToCoverage = {
-  'Fake 1-sample alpha test': `\
-    fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
-      if (alpha < 0.5) { return 0; }
-      return 0xf;
-    }
-  `,
   'Apple M1 Pro': `\
     fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
       let i = (xy.y % 2) * 2 + (xy.x % 2);
@@ -100,3 +94,12 @@ export const kEmulatedAlphaToCoverage = {
     }
   `.trimEnd(),
 };
+
+export type DeviceName = keyof typeof kEmulatedAlphaToCoverage;
+
+export const kEmulatedAlphaTest = `\
+  fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
+    if (alpha < 0.5) { return 0; }
+    return 0xf;
+  }
+`;

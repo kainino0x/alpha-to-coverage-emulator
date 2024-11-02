@@ -21,24 +21,8 @@ struct Varying {
   @location(0) color: vec4f,
 }
 
-// Fragment (native alpha-to-coverage)
+// Fragment (called by Scene.ts)
 
-@fragment
-fn fmain_native(vary: Varying) -> @location(0) vec4f {
+fn computeFragment(vary: Varying) -> vec4f {
   return vary.color;
-}
-
-// Fragment (emulated alpha-to-coverage)
-
-struct FragOut {
-  @location(0) color: vec4f,
-  @builtin(sample_mask) mask: u32,
-}
-
-@fragment
-fn fmain_emulated(vary: Varying) -> FragOut {
-  // emulatedAlphaToCoverage comes from emulatedAlphaToCoverage.ts depending
-  // on the emulation mode.
-  let mask = emulatedAlphaToCoverage(vary.color.a, vec2u(vary.pos.xy));
-  return FragOut(vec4f(vary.color.rgb, 1), mask);
 }

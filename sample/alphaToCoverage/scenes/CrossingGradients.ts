@@ -1,45 +1,17 @@
-import { Config } from '../main';
-import { kEmulatedAlphaToCoverage } from '../emulatedAlphaToCoverage';
+import { Config, ModeName } from '../main';
+import {
+  DeviceName,
+  kEmulatedAlphaToCoverage,
+} from '../emulatedAlphaToCoverage';
 import crossingGradientsWGSL from './CrossingGradients.wgsl';
+import { Scene } from './Scene';
 
-export class CrossingGradients {
+export class CrossingGradients extends Scene {
   private readonly bufVertexColors: GPUBuffer;
-  private readonly pipelineNative: GPURenderPipeline;
   private lastEmulatedDevice: Config['emulatedDevice'] | null = null;
-  private pipelineEmulated: GPURenderPipeline | null = null;
 
-  constructor(private device: GPUDevice) {
-    const crossingGradientsNativeModule = device.createShaderModule({
-      code:
-        crossingGradientsWGSL +
-        // emulatedAlphaToCoverage is not used
-        `fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 { return 0; }`,
-    });
-    this.pipelineNative = device.createRenderPipeline({
-      label: 'CrossingGradients with native alpha-to-coverage',
-      layout: 'auto',
-      vertex: {
-        module: crossingGradientsNativeModule,
-        buffers: [
-          {
-            arrayStride: 4 * Float32Array.BYTES_PER_ELEMENT,
-            attributes: [{ shaderLocation: 0, format: 'float32x4', offset: 0 }],
-          },
-        ],
-      },
-      fragment: {
-        module: crossingGradientsNativeModule,
-        entryPoint: 'fmain_native',
-        targets: [{ format: 'rgba8unorm' }],
-      },
-      multisample: { count: 4, alphaToCoverageEnabled: true },
-      depthStencil: {
-        format: 'depth24plus',
-        depthWriteEnabled: false,
-      },
-      primitive: { topology: 'triangle-list' },
-    });
-
+  constructor(device: GPUDevice) {
+    super(device);
     this.bufVertexColors = device.createBuffer({
       usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.VERTEX,
       size: 12 * 4 * Float32Array.BYTES_PER_ELEMENT,
@@ -73,46 +45,30 @@ export class CrossingGradients {
         ...c2, a2a, ...c2, a2a, ...c2, a2b, ...c2, a2b, ...c2, a2a, ...c2, a2b,
       ]);
     this.device.queue.writeBuffer(this.bufVertexColors, 0, dataVertexColors);
-
-    if (this.lastEmulatedDevice !== config.emulatedDevice) {
-      // Pipeline to render to a multisampled texture using *emulated* alpha-to-coverage
-      const crossingGradientsEmulatedModule = this.device.createShaderModule({
-        code:
-          crossingGradientsWGSL +
-          kEmulatedAlphaToCoverage[config.emulatedDevice],
-      });
-      this.pipelineEmulated = this.device.createRenderPipeline({
-        label: 'CrossingGradients with emulated alpha-to-coverage',
-        layout: 'auto',
-        vertex: {
-          module: crossingGradientsEmulatedModule,
-          buffers: [
-            {
-              arrayStride: 4 * Float32Array.BYTES_PER_ELEMENT,
-              attributes: [
-                { shaderLocation: 0, format: 'float32x4', offset: 0 },
-              ],
-            },
-          ],
-        },
-        fragment: {
-          module: crossingGradientsEmulatedModule,
-          entryPoint: 'fmain_emulated',
-          targets: [{ format: 'rgba8unorm' }],
-        },
-        multisample: { count: 4, alphaToCoverageEnabled: false },
-        depthStencil: {
-          format: 'depth24plus',
-          depthWriteEnabled: false,
-        },
-        primitive: { topology: 'triangle-list' },
-      });
-      this.lastEmulatedDevice = config.emulatedDevice;
-    }
   }
 
-  render(pass: GPURenderPassEncoder, emulated: boolean) {
-    pass.setPipeline(emulated ? this.pipelineEmulated : this.pipelineNative);
+  render(
+    pass: GPURenderPassEncoder,
+    mode: ModeName,
+    emulatedDevice: DeviceName
+  ) {
+    const pipeline = this.getPipeline(
+      {
+        sceneName: 'CrossingGradients',
+        code: crossingGradientsWGSL,
+        pipelineLayout: 'auto',
+        vertexBuffers: [
+          {
+            arrayStride: 4 * Float32Array.BYTES_PER_ELEMENT,
+            attributes: [{ shaderLocation: 0, format: 'float32x4', offset: 0 }],
+          },
+        ],
+        depthTest: false,
+      },
+      { mode, emulatedDevice }
+    );
+
+    pass.setPipeline(pipeline);
     pass.setVertexBuffer(0, this.bufVertexColors);
     pass.draw(12);
   }

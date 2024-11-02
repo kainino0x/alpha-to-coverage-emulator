@@ -90,24 +90,8 @@ fn uvToAlpha(uv: vec2f) -> f32 {
   return clamp(t / max(divisor, 0.0001), 0, 1);
 }
 
-// Fragment (native alpha-to-coverage)
+// Fragment (called by Scene.ts)
 
-@fragment
-fn fmain_native(vary: Varying) -> @location(0) vec4f {
+fn computeFragment(vary: Varying) -> vec4f {
   return vec4f(0, vary.gb, uvToAlpha(vary.uv));
-}
-
-// Fragment (emulated alpha-to-coverage)
-
-struct FragOut {
-  @location(0) color: vec4f,
-  @builtin(sample_mask) mask: u32,
-}
-
-@fragment
-fn fmain_emulated(vary: Varying) -> FragOut {
-  // emulatedAlphaToCoverage comes from emulatedAlphaToCoverage.ts depending
-  // on the emulation mode.
-  let mask = emulatedAlphaToCoverage(uvToAlpha(vary.uv), vec2u(vary.pos.xy));
-  return FragOut(vec4f(0, vary.gb, 1), mask);
 }

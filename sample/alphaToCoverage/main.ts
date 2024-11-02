@@ -1,8 +1,14 @@
+// TODO: add a mode with very transparent leaves (like the gradient sample but arranged like foliage)
+// TODO: different color for each leaf in the foliage example
+// TODO: add a mode to the gradient that does alpha blending as a reference result
 import { GUI } from 'dat.gui';
 
 import showMultisampleTextureWGSL from './showMultisampleTexture.wgsl';
 import { quitIfWebGPUNotAvailable } from '../util';
-import { kEmulatedAlphaToCoverage } from './emulatedAlphaToCoverage';
+import {
+  DeviceName,
+  kEmulatedAlphaToCoverage,
+} from './emulatedAlphaToCoverage';
 
 import { CrossingGradients } from './scenes/CrossingGradients';
 import { Leaf } from './scenes/Leaf';
@@ -28,12 +34,21 @@ const scenes = {
 //
 
 const kSceneNames = ['CrossingGradients', 'Leaf', 'Foliage'] as const;
-type DeviceName = keyof typeof kEmulatedAlphaToCoverage;
+const kModeNames = {
+  'native alpha-to-coverage': 'native',
+  'emulated alpha-to-coverage': 'emulated',
+  'alpha test 50%': 'alphatest',
+  'alpha blending': 'blending',
+} as const;
+
+type SceneName = (typeof kSceneNames)[number];
+export type ModeName = (typeof kModeNames)[keyof typeof kModeNames];
 
 const kInitConfig = {
-  scene: 'Foliage' as (typeof kSceneNames)[number],
-  emulatedDevice: 'Fake 1-sample alpha test' as DeviceName,
-  largeDotEmulate: false,
+  scene: 'Foliage' as SceneName,
+  emulatedDevice: 'Apple M1 Pro' as DeviceName,
+  mode: 'native' as ModeName,
+  mode2: 'none' as ModeName | 'none',
   showComparisonDot: false,
   sizeLog2: 8,
   showResolvedColor: true,
@@ -42,7 +57,7 @@ const kInitConfig = {
   CrossingGradients_alpha1: 0,
   CrossingGradients_color2: 0x0000ff,
   CrossingGradients_alpha2: 5,
-  Leaf_featheringWidthPx: 1,
+  FoliageCommon_featheringWidthPx: 1,
   Foliage_cameraRotation: 0,
   animate: true,
 };
@@ -50,7 +65,7 @@ export type Config = typeof kInitConfig;
 const config = { ...kInitConfig };
 
 const gui = new GUI();
-gui.width = 300;
+gui.width = 340;
 {
   let isFullscreen = false;
   const buttons = {
@@ -64,15 +79,15 @@ gui.width = 300;
     },
     foliageDemo() {
       Object.assign(config, kInitConfig);
-      gui.updateDisplay();
+      updateDisplay();
     },
     leaf() {
       Object.assign(config, kInitConfig);
       config.scene = 'Leaf';
       config.sizeLog2 = 7;
-      gui.updateDisplay();
+      updateDisplay();
     },
-    overlappingGradients() {
+    overlappingGradientsA2C() {
       Object.assign(config, kInitConfig);
       config.scene = 'CrossingGradients';
       config.sizeLog2 = 8;
@@ -80,7 +95,12 @@ gui.width = 300;
       config.CrossingGradients_gradient = true;
       config.CrossingGradients_alpha1 = 100;
       config.CrossingGradients_alpha2 = 100;
-      gui.updateDisplay();
+      updateDisplay();
+    },
+    overlappingGradientsBlend() {
+      this.overlappingGradientsA2C();
+      config.mode = 'blending';
+      updateDisplay();
     },
     solidInspector() {
       Object.assign(config, kInitConfig);
@@ -88,7 +108,7 @@ gui.width = 300;
       config.sizeLog2 = 3;
       config.animate = true;
       config.CrossingGradients_gradient = false;
-      gui.updateDisplay();
+      updateDisplay();
     },
   };
 
@@ -98,61 +118,105 @@ gui.width = 300;
   presets.open();
   presets.add(buttons, 'foliageDemo').name('foliage demo (default)');
   presets.add(buttons, 'leaf').name('leaf closeup (emulated) ');
-  presets.add(buttons, 'overlappingGradients').name('overlapping gradients');
+  presets.add(buttons, 'overlappingGradientsA2C').name('overlapping gradients (alpha-to-coverage)');
+  presets.add(buttons, 'overlappingGradientsBlend').name('overlapping gradients (blending)');
   presets.add(buttons, 'solidInspector').name('solid pattern inspector');
 
   const visualizationPanel = gui.addFolder('Visualization');
   visualizationPanel.open();
   visualizationPanel.add(config, 'sizeLog2', 0, 9, 1).name('size = 2**');
   visualizationPanel.add(config, 'showResolvedColor', false);
+  const enableDisableDevice = () => {
+    emulatedDeviceElem.disabled = !(
+      config.mode === 'emulated' || config.mode2 === 'emulated'
+    );
+  };
   visualizationPanel
+    .add(config, 'mode', kModeNames)
+    .onChange(enableDisableDevice);
+  visualizationPanel
+    .add(config, 'mode2', { none: 'none', ...kModeNames })
+    .name('comparison dot')
+    .onChange(enableDisableDevice);
+  const emulatedDeviceElem = visualizationPanel
     .add(config, 'emulatedDevice', Object.keys(kEmulatedAlphaToCoverage))
-    .name('device to emulate');
-  visualizationPanel
-    .add(config, 'largeDotEmulate', false)
-    .name('<code>emulate</code>');
-  visualizationPanel
-    .add(config, 'showComparisonDot', false)
-    .name('compare <code>!emulate</code>');
+    .name('device to emulate').domElement.childNodes[0] as HTMLSelectElement;
+  enableDisableDevice();
 
   const scenesPanel = gui.addFolder('Scenes');
   scenesPanel.open();
-  scenesPanel.add(config, 'scene', kSceneNames);
+
+  const scenePanels = [];
+  const showHideScenePanels = () => {
+    for (const scenePanel of scenePanels) {
+      scenePanel.hide();
+    }
+    switch (config.scene) {
+      case 'CrossingGradients':
+        sceneCrossingGradients.show();
+        break;
+      case 'Foliage':
+        sceneLeaf.show();
+        sceneFoliage.show();
+        break;
+      case 'Leaf':
+        sceneLeaf.show();
+        break;
+    }
+  };
+  scenesPanel.add(config, 'scene', kSceneNames).onChange(showHideScenePanels);
   scenesPanel.add(config, 'animate', false);
 
   const sceneCrossingGradients = scenesPanel.addFolder(
     'CrossingGradients scene options'
   );
   sceneCrossingGradients.open();
-  sceneCrossingGradients
-    .add(config, 'CrossingGradients_gradient', true)
-    .name('use gradient');
+  scenePanels.push(sceneCrossingGradients);
+  {
+    sceneCrossingGradients
+      .add(config, 'CrossingGradients_gradient', true)
+      .name('use gradient');
 
-  const draw1Panel = sceneCrossingGradients.addFolder('Draw 1 (top->bottom)');
-  draw1Panel.open();
-  draw1Panel.addColor(config, 'CrossingGradients_color1').name('color');
-  draw1Panel
-    .add(config, 'CrossingGradients_alpha1', 0, 100, 0.001)
-    .name('alpha %');
+    const draw1Panel = sceneCrossingGradients.addFolder('Draw 1 (top->bottom)');
+    draw1Panel.open();
+    draw1Panel.addColor(config, 'CrossingGradients_color1').name('color');
+    draw1Panel
+      .add(config, 'CrossingGradients_alpha1', 0, 100, 0.001)
+      .name('alpha %');
 
-  const draw2Panel = sceneCrossingGradients.addFolder('Draw 2 (left->right)');
-  draw2Panel.open();
-  draw2Panel.addColor(config, 'CrossingGradients_color2').name('color');
-  draw2Panel
-    .add(config, 'CrossingGradients_alpha2', 0, 100, 0.001)
-    .name('alpha %');
+    const draw2Panel = sceneCrossingGradients.addFolder('Draw 2 (left->right)');
+    draw2Panel.open();
+    draw2Panel.addColor(config, 'CrossingGradients_color2').name('color');
+    draw2Panel
+      .add(config, 'CrossingGradients_alpha2', 0, 100, 0.001)
+      .name('alpha %');
+  }
 
   const sceneLeaf = scenesPanel.addFolder('Leaf/Foliage scene options');
   sceneLeaf.open();
-  sceneLeaf
-    .add(config, 'Leaf_featheringWidthPx', 1, 25, 1)
-    .name('feathering width (px)');
+  scenePanels.push(sceneLeaf);
+  {
+    sceneLeaf
+      .add(config, 'FoliageCommon_featheringWidthPx', 1, 25, 1)
+      .name('feathering width (px)');
+  }
 
   const sceneFoliage = scenesPanel.addFolder('Foliage scene options');
   sceneFoliage.open();
-  sceneFoliage
-    .add(config, 'Foliage_cameraRotation', 0, 360, 1)
-    .name('camera rotation');
+  scenePanels.push(sceneFoliage);
+  {
+    sceneFoliage
+      .add(config, 'Foliage_cameraRotation', 0, 360, 1)
+      .name('camera rotation');
+  }
+
+  showHideScenePanels();
+
+  function updateDisplay() {
+    enableDisableDevice();
+    showHideScenePanels();
+    gui.updateDisplay();
+  }
 }
 
 //
@@ -318,7 +382,7 @@ function render() {
         depthStoreOp: 'discard',
       },
     });
-    scenes[config.scene].render(pass, config.largeDotEmulate);
+    scenes[config.scene].render(pass, config.mode, config.emulatedDevice);
     pass.end();
   }
   // small dot pass
@@ -342,7 +406,8 @@ function render() {
     });
     scenes[config.scene].render(
       pass,
-      config.largeDotEmulate /* xor */ !== config.showComparisonDot
+      config.mode2 === 'none' ? config.mode : config.mode2,
+      config.emulatedDevice
     );
     pass.end();
   }
