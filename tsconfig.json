@@ -3,8 +3,8 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
-    "outDir": "../out",
-    "rootDir": "../",
+    "outDir": "./out",
+    "rootDir": ".",
     "moduleResolution": "Node",
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
@@ -12,15 +12,7 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "typeRoots": [
-      "../node_modules/@webgpu/types",
-      "../node_modules/@types",
-    ],
+    "typeRoots": ["../node_modules/@webgpu/types", "../node_modules/@types"]
   },
-  "include": [
-    "./**/*.ts",
-  ],
-  "exclude": [
-    "../out"
-  ],
+  "include": ["src/**/*.ts"]
 }

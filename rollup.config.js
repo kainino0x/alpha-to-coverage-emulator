@@ -47,9 +47,21 @@ function filenamePlugin() {
 export default [
   {
     input: 'src/main.ts',
+    output: [{ file: `${outPath}/main.js`, format: 'esm', sourcemap: true }],
+    plugins: [
+      wgslPlugin(),
+      nodeResolve(),
+      commonjs(),
+      filenamePlugin(),
+      typescript({ tsconfig: './tsconfig.json' }),
+    ],
+    watch: { clearScreen: false },
+  },
+  {
+    input: 'src/emulator-generator/main.ts',
     output: [
       {
-        file: `${outPath}/main.js`,
+        file: `${outPath}/emulator-generator/main.js`,
         format: 'esm',
         sourcemap: true,
       },
@@ -59,10 +71,8 @@ export default [
       nodeResolve(),
       commonjs(),
       filenamePlugin(),
-      typescript({ tsconfig: './src/tsconfig.json' }),
+      typescript({ tsconfig: './tsconfig.json' }),
     ],
-    watch: {
-      clearScreen: false,
-    },
+    watch: { clearScreen: false },
   },
 ];
