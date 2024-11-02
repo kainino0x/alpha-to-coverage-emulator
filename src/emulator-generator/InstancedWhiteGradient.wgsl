@@ -1,15 +1,22 @@
 // Vertex
 
+// Number of steps such that:
+// instance_index=0 -> alpha=0
+// instance_index=alphaIncrements -> alpha=1
+override alphaIncrements: f32;
+
 @vertex
 fn vmain(
   @builtin(vertex_index) vertex_index: u32,
-  @location(0) alpha: f32,
+  // The instance index tells us which alpha value to use.
+  @builtin(instance_index) instance_index: u32,
 ) -> Varying {
   var square = array(
     vec2f(-1, -1), vec2f(-1,  1), vec2f( 1, -1),
     vec2f( 1, -1), vec2f(-1,  1), vec2f( 1,  1),
   );
 
+  let alpha = f32(instance_index) / alphaIncrements;
   return Varying(vec4(square[vertex_index % 6], 0, 1), alpha);
 }
 

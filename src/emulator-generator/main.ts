@@ -1,22 +1,19 @@
 import { quitIfWebGPUNotAvailable } from '../util';
-import transparentWhiteWGSL from './TransparentWhite.wgsl';
+import instancedWhiteGradientWGSL from './InstancedWhiteGradient.wgsl';
 import copyMaskToBufferWGSL from './CopyMaskToBuffer.wgsl';
+
+const output = document.getElementById('output')! as HTMLPreElement;
 
 const kSize = 8;
 const kSampleCount = 4;
+const kAlphaIncrements = 10_000;
 
-const device = await (async () => {
+const [info, device] = await (async () => {
   const adapter = await navigator.gpu?.requestAdapter();
   const device = await adapter?.requestDevice();
   quitIfWebGPUNotAvailable(adapter, device);
-  return device;
+  return [adapter!.info, device];
 })();
-
-const instanceBuffer = device.createBuffer({
-  label: 'instanceBuffer',
-  usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.VERTEX,
-  size: Float32Array.BYTES_PER_ELEMENT,
-});
 
 const renderTarget = device
   .createTexture({
@@ -37,22 +34,18 @@ const copyBuffer = device.createBuffer({
 const readbackBuffer = device.createBuffer({
   label: 'readbackBuffer',
   usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-  size: kBufferSize,
+  size: kBufferSize * (kAlphaIncrements + 1),
 });
 
-const quadModule = device.createShaderModule({ code: transparentWhiteWGSL });
+const quadModule = device.createShaderModule({
+  code: instancedWhiteGradientWGSL,
+});
 const quadPipeline = device.createRenderPipeline({
-  label: 'TransparentWhite',
+  label: 'quadPipeline',
   layout: 'auto',
   vertex: {
     module: quadModule,
-    buffers: [
-      {
-        stepMode: 'instance',
-        arrayStride: Float32Array.BYTES_PER_ELEMENT,
-        attributes: [{ shaderLocation: 0, format: 'float32', offset: 0 }],
-      },
-    ],
+    constants: { alphaIncrements: kAlphaIncrements },
   },
   fragment: { module: quadModule, targets: [{ format: 'rgba8unorm' }] },
   multisample: { count: kSampleCount, alphaToCoverageEnabled: true },
@@ -74,11 +67,9 @@ const copyBindGroup = device.createBindGroup({
   ],
 });
 
-// TODO: make this loop finer
-for (let alpha = 0; alpha <= 1; alpha += 0.5) {
-  // Update the alpha value for this iteration
-  device.queue.writeBuffer(instanceBuffer, 0, new Float32Array([alpha]));
+output.textContent = '// initialized';
 
+for (let alphaStep = 0; alphaStep <= kAlphaIncrements; ++alphaStep) {
   const enc = device.createCommandEncoder();
   // Render a white quad with that alpha value, using alpha-to-coverage
   {
@@ -93,8 +84,7 @@ for (let alpha = 0; alpha <= 1; alpha += 0.5) {
       ],
     });
     pass.setPipeline(quadPipeline);
-    pass.setVertexBuffer(0, instanceBuffer);
-    pass.draw(6);
+    pass.draw(6, 1, 0, alphaStep);
     pass.end();
   }
   // Copy the multisampled result into a buffer
@@ -103,19 +93,87 @@ for (let alpha = 0; alpha <= 1; alpha += 0.5) {
     pass.setPipeline(copyPipeline);
     pass.setBindGroup(0, copyBindGroup);
     pass.dispatchWorkgroups(1, 1);
-    // TODO copy render result into buffer
     pass.end();
   }
   // Copy the buffer to a mappable readback buffer
-  enc.copyBufferToBuffer(copyBuffer, 0, readbackBuffer, 0, kBufferSize);
+  enc.copyBufferToBuffer(
+    copyBuffer,
+    0,
+    readbackBuffer,
+    alphaStep * kBufferSize,
+    kBufferSize
+  );
   device.queue.submit([enc.finish()]);
-
-  // Read back the buffer
-  await readbackBuffer.mapAsync(GPUMapMode.READ);
-  {
-    const data = new Uint32Array(readbackBuffer.getMappedRange());
-    console.log(data);
-    // TODO do something with result
+  if (alphaStep % 1000 === 0) {
+    const alpha = alphaStep / kAlphaIncrements;
+    output.textContent = `// progress: alpha = ${(alpha * 100).toFixed(0)}%`;
+    await device.queue.onSubmittedWorkDone();
   }
+}
+
+// Read back the buffer and extract the results
+let results: Array<{ startAlpha: number; pattern: number[] }> = [];
+let lastSeenPatternString = '';
+{
+  await readbackBuffer.mapAsync(GPUMapMode.READ);
+
+  const readback = readbackBuffer.getMappedRange();
+  for (let alphaStep = 0; alphaStep <= kAlphaIncrements; ++alphaStep) {
+    const data = new Uint32Array(
+      readback,
+      alphaStep * kBufferSize,
+      kSize * kSize
+    );
+
+    const patternString = data.toString();
+    if (patternString !== lastSeenPatternString) {
+      const alpha = alphaStep / kAlphaIncrements;
+      results.push({ startAlpha: alpha, pattern: Array.from(data) });
+      lastSeenPatternString = patternString;
+    }
+  }
+
   readbackBuffer.unmap();
 }
+
+// Try to determine a denominator for the alpha values we saw.
+let halfDenominator = kAlphaIncrements; // fallback denominator
+const kAllowedError = 1 / kAlphaIncrements;
+{
+  for (const d of [3, 4, 5, 15, 16, 17, 255, 256, 257, 1023, 1024, 1025]) {
+    let valid = true;
+    for (let i = 1; i < results.length; ++i) {
+      const { startAlpha } = results[i];
+      const numerator = Math.floor(startAlpha * d * 2) / 2;
+      if (startAlpha - numerator / d > kAllowedError) {
+        valid = false;
+        break;
+      }
+    }
+
+    if (valid) {
+      halfDenominator = d;
+      break;
+    }
+  }
+}
+
+let infoString = `${info.vendor} ${info.architecture} ${info.device} ${info.description}`.trim();
+let out = `\
+// ${infoString}
+fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
+  let i = (xy.y % ${kSize}) * ${kSize} + (xy.x % ${kSize});
+`;
+for (let i = 0; i < results.length - 1; ++i) {
+  const pattern = results[i].pattern;
+  const endAlpha = results[i + 1].startAlpha;
+
+  const alphaFraction = Math.round(endAlpha * halfDenominator * 2) / 2;
+  const array = Array.from(pattern, (v) => '0x' + v.toString(16)).join(', ');
+  out += `  if (alpha < ${alphaFraction} / ${halfDenominator}.0) { return array(${array}u)[i]; }\n`;
+}
+out += `\
+  return 0xf;
+}`;
+output.textContent = out;
+console.log(out);

@@ -1,6 +1,9 @@
+// TODO add link to emulator-generator
+// TODO add presets for emulated devices
+// TODO add a lot of help text
 import { GUI } from 'dat.gui';
 
-import showMultisampleTextureWGSL from './showMultisampleTexture.wgsl';
+import showMultisampleTextureWGSL from './ShowMultisampleTexture.wgsl';
 import { quitIfWebGPUNotAvailable } from './util';
 import {
   DeviceName,
@@ -46,9 +49,9 @@ export type ModeName = (typeof kModeNames)[keyof typeof kModeNames];
 
 const kInitConfig = {
   scene: 'Foliage' as SceneName,
-  emulatedDevice: 'Apple M1 Pro' as DeviceName,
   mode: 'native' as ModeName,
   mode2: 'none' as ModeName | 'none',
+  emulatedDevice: 'Apple M1 Pro' as DeviceName,
   showComparisonDot: false,
   sizeLog2: 8,
   showResolvedColor: true,
@@ -119,7 +122,7 @@ gui.width = 340;
   const presets = gui.addFolder('Presets');
   presets.open();
   presets.add(buttons, 'foliageDemo').name('foliage demo (default)');
-  presets.add(buttons, 'leaf').name('leaf closeup (emulated) ');
+  presets.add(buttons, 'leaf').name('leaf closeup ');
   presets
     .add(buttons, 'overlappingGradientsA2C')
     .name('overlapping gradients (alpha-to-coverage)');
