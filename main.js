@@ -2655,23 +2655,23 @@ const kEmulatedAlphaToCoverage = {
     'Apple M1 Pro': `\
     fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
       let i = (xy.y % 2) * 2 + (xy.x % 2);
-      if (alpha <   7.5 / 255.0) { return ${0b0000}; }
-      if (alpha <  23.5 / 255.0) { return array(${0b0001}u, ${0b0000}, ${0b0000}, ${0b0000})[i]; }
-      if (alpha <  39.5 / 255.0) { return array(${0b0001}u, ${0b0000}, ${0b0000}, ${0b0001})[i]; }
-      if (alpha <  55.5 / 255.0) { return array(${0b0001}u, ${0b0001}, ${0b0000}, ${0b0001})[i]; }
-      if (alpha <  71.5 / 255.0) { return array(${0b0001}u, ${0b0001}, ${0b0001}, ${0b0001})[i]; }
-      if (alpha <  87.5 / 255.0) { return array(${0b1001}u, ${0b0001}, ${0b0001}, ${0b0001})[i]; }
-      if (alpha < 103.5 / 255.0) { return array(${0b1001}u, ${0b0001}, ${0b0001}, ${0b1001})[i]; }
-      if (alpha < 119.5 / 255.0) { return array(${0b1001}u, ${0b1001}, ${0b0001}, ${0b1001})[i]; }
-      if (alpha < 135.5 / 255.0) { return array(${0b1001}u, ${0b1001}, ${0b1001}, ${0b1001})[i]; }
-      if (alpha < 151.5 / 255.0) { return array(${0b1011}u, ${0b1001}, ${0b1001}, ${0b1001})[i]; }
-      if (alpha < 167.5 / 255.0) { return array(${0b1011}u, ${0b1001}, ${0b1001}, ${0b1011})[i]; }
-      if (alpha < 183.5 / 255.0) { return array(${0b1011}u, ${0b1011}, ${0b1001}, ${0b1011})[i]; }
-      if (alpha < 199.5 / 255.0) { return array(${0b1011}u, ${0b1011}, ${0b1011}, ${0b1011})[i]; }
-      if (alpha < 215.5 / 255.0) { return array(${0b1111}u, ${0b1011}, ${0b1011}, ${0b1011})[i]; }
-      if (alpha < 231.5 / 255.0) { return array(${0b1111}u, ${0b1011}, ${0b1011}, ${0b1111})[i]; }
-      if (alpha < 247.5 / 255.0) { return array(${0b1111}u, ${0b1111}, ${0b1011}, ${0b1111})[i]; }
-      return ${0b1111};
+      if (alpha < 7.5 / 255.0) { return array(0x0, 0x0, 0x0, 0x0u)[i]; }
+      if (alpha < 23.5 / 255.0) { return array(0x1, 0x0, 0x0, 0x0u)[i]; }
+      if (alpha < 39.5 / 255.0) { return array(0x1, 0x0, 0x0, 0x1u)[i]; }
+      if (alpha < 55.5 / 255.0) { return array(0x1, 0x1, 0x0, 0x1u)[i]; }
+      if (alpha < 71.5 / 255.0) { return array(0x1, 0x1, 0x1, 0x1u)[i]; }
+      if (alpha < 87.5 / 255.0) { return array(0x9, 0x1, 0x1, 0x1u)[i]; }
+      if (alpha < 103.5 / 255.0) { return array(0x9, 0x1, 0x1, 0x9u)[i]; }
+      if (alpha < 119.5 / 255.0) { return array(0x9, 0x9, 0x1, 0x9u)[i]; }
+      if (alpha < 135.5 / 255.0) { return array(0x9, 0x9, 0x9, 0x9u)[i]; }
+      if (alpha < 151.5 / 255.0) { return array(0xb, 0x9, 0x9, 0x9u)[i]; }
+      if (alpha < 167.5 / 255.0) { return array(0xb, 0x9, 0x9, 0xbu)[i]; }
+      if (alpha < 183.5 / 255.0) { return array(0xb, 0xb, 0x9, 0xbu)[i]; }
+      if (alpha < 199.5 / 255.0) { return array(0xb, 0xb, 0xb, 0xbu)[i]; }
+      if (alpha < 215.5 / 255.0) { return array(0xf, 0xb, 0xb, 0xbu)[i]; }
+      if (alpha < 231.5 / 255.0) { return array(0xf, 0xb, 0xb, 0xfu)[i]; }
+      if (alpha < 247.5 / 255.0) { return array(0xf, 0xf, 0xb, 0xfu)[i]; }
+      return 0xf;
     }
   `.trimEnd(),
     '(?) NVIDIA GeForce RTX 3070': `\
@@ -2687,23 +2687,23 @@ const kEmulatedAlphaToCoverage = {
     'ARM Mali-G78': `\
     fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
       let i = (xy.y % 2) * 2 + (xy.x % 2);
-      if (alpha <   8 / 256.0) { return ${0b0000}; }
-      if (alpha <  24 / 256.0) { return array(${0b0000}u, ${0b1000}, ${0b0000}, ${0b0000})[i]; }
-      if (alpha <  40 / 256.0) { return array(${0b0001}u, ${0b1000}, ${0b0000}, ${0b0000})[i]; }
-      if (alpha <  56 / 256.0) { return array(${0b0001}u, ${0b1000}, ${0b0000}, ${0b0001})[i]; }
-      if (alpha <  72 / 256.0) { return array(${0b0001}u, ${0b1000}, ${0b1000}, ${0b0001})[i]; }
-      if (alpha <  88 / 256.0) { return array(${0b0001}u, ${0b1010}, ${0b1000}, ${0b0001})[i]; }
-      if (alpha < 104 / 256.0) { return array(${0b0101}u, ${0b1010}, ${0b1000}, ${0b0001})[i]; }
-      if (alpha < 120 / 256.0) { return array(${0b0101}u, ${0b1010}, ${0b1000}, ${0b0101})[i]; }
-      if (alpha < 136 / 256.0) { return array(${0b0101}u, ${0b1010}, ${0b1010}, ${0b0101})[i]; }
-      if (alpha < 152 / 256.0) { return array(${0b0101}u, ${0b1110}, ${0b1010}, ${0b0101})[i]; }
-      if (alpha < 168 / 256.0) { return array(${0b0111}u, ${0b1110}, ${0b1010}, ${0b0101})[i]; }
-      if (alpha < 184 / 256.0) { return array(${0b0111}u, ${0b1110}, ${0b1010}, ${0b0111})[i]; }
-      if (alpha < 200 / 256.0) { return array(${0b0111}u, ${0b1110}, ${0b1110}, ${0b0111})[i]; }
-      if (alpha < 216 / 256.0) { return array(${0b0111}u, ${0b1111}, ${0b1110}, ${0b0111})[i]; }
-      if (alpha < 232 / 256.0) { return array(${0b1111}u, ${0b1111}, ${0b1110}, ${0b0111})[i]; }
-      if (alpha < 248 / 256.0) { return array(${0b1111}u, ${0b1111}, ${0b1110}, ${0b1111})[i]; }
-      return ${0b1111};
+      if (alpha < 0.5 / 16.0) { return array(0x0, 0x0, 0x0, 0x0u)[i]; }
+      if (alpha < 1.5 / 16.0) { return array(0x0, 0x8, 0x0, 0x0u)[i]; }
+      if (alpha < 2.5 / 16.0) { return array(0x1, 0x8, 0x0, 0x0u)[i]; }
+      if (alpha < 3.5 / 16.0) { return array(0x1, 0x8, 0x0, 0x1u)[i]; }
+      if (alpha < 4.5 / 16.0) { return array(0x1, 0x8, 0x8, 0x1u)[i]; }
+      if (alpha < 5.5 / 16.0) { return array(0x1, 0xa, 0x8, 0x1u)[i]; }
+      if (alpha < 6.5 / 16.0) { return array(0x5, 0xa, 0x8, 0x1u)[i]; }
+      if (alpha < 7.5 / 16.0) { return array(0x5, 0xa, 0x8, 0x5u)[i]; }
+      if (alpha < 8.5 / 16.0) { return array(0x5, 0xa, 0xa, 0x5u)[i]; }
+      if (alpha < 9.5 / 16.0) { return array(0x5, 0xe, 0xa, 0x5u)[i]; }
+      if (alpha < 10.5 / 16.0) { return array(0x7, 0xe, 0xa, 0x5u)[i]; }
+      if (alpha < 11.5 / 16.0) { return array(0x7, 0xe, 0xa, 0x7u)[i]; }
+      if (alpha < 12.5 / 16.0) { return array(0x7, 0xe, 0xe, 0x7u)[i]; }
+      if (alpha < 13.5 / 16.0) { return array(0x7, 0xf, 0xe, 0x7u)[i]; }
+      if (alpha < 14.5 / 16.0) { return array(0xf, 0xf, 0xe, 0x7u)[i]; }
+      if (alpha < 15.5 / 16.0) { return array(0xf, 0xf, 0xe, 0xfu)[i]; }
+      return 0xf;
     }
   `.trimEnd(),
     '(??) AMD Radeon PRO WX 3200': `\
@@ -8846,6 +8846,9 @@ class Foliage extends FoliageCommon {
     }
 }
 
+// TODO add link to emulator-generator
+// TODO add presets for emulated devices
+// TODO add a lot of help text
 const canvas = document.querySelector('canvas');
 const device = await (async () => {
     const adapter = await navigator.gpu?.requestAdapter();
@@ -8873,9 +8876,9 @@ const kModeNames = {
 };
 const kInitConfig = {
     scene: 'Foliage',
-    emulatedDevice: 'Apple M1 Pro',
     mode: 'native',
     mode2: 'none',
+    emulatedDevice: 'Apple M1 Pro',
     showComparisonDot: false,
     sizeLog2: 8,
     showResolvedColor: true,
@@ -8943,7 +8946,7 @@ gui.width = 340;
     const presets = gui.addFolder('Presets');
     presets.open();
     presets.add(buttons, 'foliageDemo').name('foliage demo (default)');
-    presets.add(buttons, 'leaf').name('leaf closeup (emulated) ');
+    presets.add(buttons, 'leaf').name('leaf closeup ');
     presets
         .add(buttons, 'overlappingGradientsA2C')
         .name('overlapping gradients (alpha-to-coverage)');
