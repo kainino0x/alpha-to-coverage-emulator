@@ -3,23 +3,62 @@ import { Config } from '../main';
 import { kEmulatedAlphaToCoverage } from '../emulatedAlphaToCoverage';
 import foliageWGSL from './Foliage.wgsl';
 
-export class Foliage {
-  private readonly pipelineLayout: GPUPipelineLayout;
+export class FoliageBase {
+  protected readonly bindGroupLayout: GPUBindGroupLayout;
+  protected readonly pipelineLayout: GPUPipelineLayout;
+  protected readonly uniformBuffer: GPUBuffer;
+  protected readonly bindGroup: GPUBindGroup;
+
+  constructor(protected device: GPUDevice) {
+    this.bindGroupLayout = device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+          buffer: {},
+        },
+      ],
+    });
+    this.pipelineLayout = device.createPipelineLayout({
+      bindGroupLayouts: [this.bindGroupLayout],
+    });
+
+    this.uniformBuffer = device.createBuffer({
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      size: (16 + 4) * Float32Array.BYTES_PER_ELEMENT,
+    });
+    this.bindGroup = device.createBindGroup({
+      layout: this.bindGroupLayout,
+      entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }],
+    });
+  }
+
+  applyConfig(config: Config) {
+    this.device.queue.writeBuffer(
+      this.uniformBuffer,
+      0,
+      getViewProjMatrix((config.Foliage_cameraRotation / 180) * Math.PI)
+    );
+    this.device.queue.writeBuffer(
+      this.uniformBuffer,
+      16 * Float32Array.BYTES_PER_ELEMENT,
+      new Float32Array([config.Leaf_featheringWidthPx])
+    );
+  }
+
+  protected setBindGroup(pass: GPURenderPassEncoder) {
+    pass.setBindGroup(0, this.bindGroup);
+  }
+}
+
+export class Foliage extends FoliageBase {
   private readonly pipelineNative: GPURenderPipeline;
-  private readonly bindGroup: GPUBindGroup;
-  private readonly uniformBuffer: GPUBuffer;
   private lastEmulatedDevice: Config['emulatedDevice'] | null = null;
   private pipelineEmulated: GPURenderPipeline | null = null;
 
-  constructor(private device: GPUDevice) {
-    const bgl = device.createBindGroupLayout({
-      entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX, buffer: {} }],
-    });
-    this.pipelineLayout = device.createPipelineLayout({
-      bindGroupLayouts: [bgl],
-    });
-
-    const crossingGradientsNativeModule = device.createShaderModule({
+  constructor(device: GPUDevice) {
+    super(device);
+    const module = device.createShaderModule({
       code:
         foliageWGSL +
         `fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 { return 0; }`,
@@ -28,11 +67,11 @@ export class Foliage {
       label: 'Foliage with emulated alpha-to-coverage',
       layout: this.pipelineLayout,
       vertex: {
-        module: crossingGradientsNativeModule,
+        module,
         entryPoint: 'vmainFoliage',
       },
       fragment: {
-        module: crossingGradientsNativeModule,
+        module,
         entryPoint: 'fmain_native',
         targets: [{ format: 'rgba8unorm' }],
       },
@@ -44,15 +83,6 @@ export class Foliage {
       },
       primitive: { topology: 'triangle-list' },
     });
-
-    this.uniformBuffer = device.createBuffer({
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-      size: 16 * Float32Array.BYTES_PER_ELEMENT,
-    });
-    this.bindGroup = device.createBindGroup({
-      layout: bgl,
-      entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }],
-    });
   }
 
   modifyConfigForAnimation(config: Config) {
@@ -60,26 +90,21 @@ export class Foliage {
   }
 
   applyConfig(config: Config) {
-    this.device.queue.writeBuffer(
-      this.uniformBuffer,
-      0,
-      getViewProjMatrix((config.Foliage_cameraRotation / 180) * Math.PI)
-    );
-
+    super.applyConfig(config);
     if (this.lastEmulatedDevice !== config.emulatedDevice) {
       // Pipeline to render to a multisampled texture using *emulated* alpha-to-coverage
-      const crossingGradientsEmulatedModule = this.device.createShaderModule({
+      const module = this.device.createShaderModule({
         code: foliageWGSL + kEmulatedAlphaToCoverage[config.emulatedDevice],
       });
       this.pipelineEmulated = this.device.createRenderPipeline({
         label: 'Foliage with native alpha-to-coverage',
         layout: this.pipelineLayout,
         vertex: {
-          module: crossingGradientsEmulatedModule,
+          module,
           entryPoint: 'vmainFoliage',
         },
         fragment: {
-          module: crossingGradientsEmulatedModule,
+          module,
           entryPoint: 'fmain_emulated',
           targets: [{ format: 'rgba8unorm' }],
         },
@@ -96,8 +121,8 @@ export class Foliage {
   }
 
   render(pass: GPURenderPassEncoder, emulated: boolean) {
+    this.setBindGroup(pass);
     pass.setPipeline(emulated ? this.pipelineEmulated : this.pipelineNative);
-    pass.setBindGroup(0, this.bindGroup);
     pass.draw(6, 1000);
   }
 }

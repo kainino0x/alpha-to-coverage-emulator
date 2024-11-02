@@ -1,9 +1,12 @@
-// Vertex
+// Uniforms (shared between vertex and fragment because it's easy)
 
 struct Uniforms {
   viewProj: mat4x4f,
+  featheringWidthPx: f32,
 };
 @binding(0) @group(0) var<uniform> uniforms: Uniforms;
+
+// Vertex
 
 // Roughly evenly space leaves in a circle using this constant
 const kPi: f32 = 3.14159265359;
@@ -39,7 +42,17 @@ fn vmainFoliage(
   let t = kPhi * f32(instance_index);
   // Low-effort leaf spacing
   let worldSpacePos = rotate(t * 3, t * 7, t * 11) * (leafSpacePos + vec3f(0, t % 5, 0));
-  return Varying(uniforms.viewProj * vec4f(worldSpacePos, 1), uv);
+  let gb = array(
+      vec2f(0.3, 0.3),
+      vec2f(0.8, 0.0),
+      vec2f(1.0, 0.0),
+      vec2f(1.0, 0.5),
+      vec2f(1.0, 1.0),
+      vec2f(0.5, 1.0),
+      vec2f(0.0, 1.0),
+      vec2f(0.0, 0.8),
+    )[u32((t * 41) % 8)];
+  return Varying(uniforms.viewProj * vec4f(worldSpacePos, 1), uv, gb);
 }
 
 @vertex
@@ -52,7 +65,8 @@ fn vmainLeaf(
   );
 
   let pos = square[vertex_index];
-  return Varying(vec4(pos, 0, 1), pos);
+  let gb = vec2f(0.8, 0);
+  return Varying(vec4(pos, 0, 1), pos, gb);
 }
 
 // Varying
@@ -60,6 +74,7 @@ fn vmainLeaf(
 struct Varying {
   @builtin(position) pos: vec4f,
   @location(0) uv: vec2f,
+  @location(1) gb: vec2f,
 }
 
 // Fragment helpers
@@ -68,21 +83,18 @@ fn uvToAlpha(uv: vec2f) -> f32 {
   let kRadius = 1.0;
   // t is a signed distance field which is >1 inside the circle and <1 outside.
   let t = kRadius - length(uv);
-  // The return value "sharpens" the gradient so it's 1 pixel wide.
-  return clamp(t / max(fwidth(t), 0.0001), 0, 1);
-}
-
-fn uvToColor(uv: vec2f) -> vec3f {
-  let t = (uv.x + 1) / 2; // range 0..1
-  let g = 0.7 * t;
-  return vec3f(0, g, 1 - g);
+  // The return value "sharpens" the gradient so it's featheringWidthPx wide.
+  let divisor = length(vec2(dpdx(t), dpdy(t))) * uniforms.featheringWidthPx;
+  // fwidth would be cheaper, but doesn't work as well when feathering > 1px:
+  //let divisor = fwidth(t) * uniforms.featheringWidthPx;
+  return clamp(t / max(divisor, 0.0001), 0, 1);
 }
 
 // Fragment (native alpha-to-coverage)
 
 @fragment
 fn fmain_native(vary: Varying) -> @location(0) vec4f {
-  return vec4f(uvToColor(vary.uv), uvToAlpha(vary.uv));
+  return vec4f(0, vary.gb, uvToAlpha(vary.uv));
 }
 
 // Fragment (emulated alpha-to-coverage)
@@ -97,5 +109,5 @@ fn fmain_emulated(vary: Varying) -> FragOut {
   // emulatedAlphaToCoverage comes from emulatedAlphaToCoverage.ts depending
   // on the emulation mode.
   let mask = emulatedAlphaToCoverage(uvToAlpha(vary.uv), vec2u(vary.pos.xy));
-  return FragOut(vec4f(uvToColor(vary.uv), 1), mask);
+  return FragOut(vec4f(0, vary.gb, 1), mask);
 }

@@ -42,6 +42,7 @@ const kInitConfig = {
   CrossingGradients_alpha1: 0,
   CrossingGradients_color2: 0x0000ff,
   CrossingGradients_alpha2: 5,
+  Leaf_featheringWidthPx: 1,
   Foliage_cameraRotation: 0,
   animate: true,
 };
@@ -140,6 +141,12 @@ gui.width = 300;
   draw2Panel
     .add(config, 'CrossingGradients_alpha2', 0, 100, 0.001)
     .name('alpha %');
+
+  const sceneLeaf = scenesPanel.addFolder('Leaf/Foliage scene options');
+  sceneLeaf.open();
+  sceneLeaf
+    .add(config, 'Leaf_featheringWidthPx', 1, 25, 1)
+    .name('feathering width (px)');
 
   const sceneFoliage = scenesPanel.addFolder('Foliage scene options');
   sceneFoliage.open();
