@@ -8922,7 +8922,9 @@ gui.width = 340;
             config.sizeLog2 = 8;
             config.animate = false;
             config.CrossingGradients_gradient = true;
+            config.CrossingGradients_color1 = 0xffffff;
             config.CrossingGradients_alpha1 = 100;
+            config.CrossingGradients_color2 = 0x000000;
             config.CrossingGradients_alpha2 = 100;
             updateDisplay();
         },
@@ -8954,7 +8956,7 @@ gui.width = 340;
     presets.add(buttons, 'solidInspector').name('solid pattern inspector');
     const visualizationPanel = gui.addFolder('Visualization');
     visualizationPanel.open();
-    visualizationPanel.add(config, 'sizeLog2', 0, 9, 1).name('size = 2**');
+    visualizationPanel.add(config, 'sizeLog2', 0, 10, 1).name('size = 2**');
     visualizationPanel.add(config, 'showResolvedColor', false);
     const enableDisableDevice = () => {
         emulatedDeviceElem.disabled = !(config.mode === 'emulated' || config.mode2 === 'emulated');
