@@ -1,17 +1,9 @@
 {
-  "name": "webgpu-samples",
-  "version": "0.1.0",
-  "description": "Samples using the WebGPU API",
   "license": "BSD-3-Clause",
-  "private": false,
   "type": "module",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/webgpu/webgpu-samples.git"
-  },
   "scripts": {
-    "lint": "eslint --ext .ts,.js,.html src/ sample/ build/ .eslintrc.cjs rollup.config.js index.html",
-    "fix": "eslint --fix --ext .ts,.js,.html src/ sample/ build/ .eslintrc.cjs rollup.config.js index.html",
+    "lint": "eslint --ext .ts,.js,.html src/ build/ .eslintrc.cjs rollup.config.js index.html",
+    "fix": "eslint --fix --ext .ts,.js,.html src/ build/ .eslintrc.cjs rollup.config.js index.html",
     "build": "node build/tools/build.js",
     "start": "node build/tools/serve.js",
     "serve": "node build/tools/serve.js",
@@ -20,16 +12,7 @@
     "export": "npm run build"
   },
   "dependencies": {
-    "@codemirror/lang-javascript": "^6.2.2",
-    "@codemirror/search": "^6.5.6",
-    "@codemirror/view": "^6.34.1",
-    "@uiw/codemirror-theme-github": "^4.23.5",
-    "@uiw/codemirror-theme-monokai": "^4.23.5",
-    "codemirror": "^6.0.1",
     "dat.gui": "^0.7.9",
-    "showdown": "^2.1.0",
-    "stats.js": "github:mrdoob/stats.js#b235d9c",
-    "teapot": "^1.0.0",
     "wgpu-matrix": "^3.2.0"
   },
   "devDependencies": {
@@ -39,8 +22,6 @@
     "@rollup/plugin-typescript": "^11.1.6",
     "@tsconfig/recommended": "^1.0.7",
     "@types/dat.gui": "^0.7.13",
-    "@types/showdown": "^2.0.6",
-    "@types/stats.js": "^0.17.3",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@webgpu/types": "^0.1.49",
     "chokidar": "^4.0.1",

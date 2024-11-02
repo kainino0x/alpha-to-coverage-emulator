@@ -6,14 +6,19 @@
     "outDir": "../out",
     "rootDir": "../",
     "moduleResolution": "Node",
+    "allowJs": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
     "typeRoots": [
       "../node_modules/@webgpu/types",
       "../node_modules/@types",
     ],
   },
   "include": [
-    "../src/**/*.ts",
-    "../sample/*.ts",
+    "./**/*.ts",
   ],
   "exclude": [
     "../out"
