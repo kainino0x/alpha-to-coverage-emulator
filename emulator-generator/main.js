@@ -129,12 +129,10 @@ const output = document.getElementById('output');
 // Render target size. It's the maximum pattern size we can detect.
 const kSize = 16;
 const kSampleCount = 4;
-const kAlphaIncrements = 1000_000; // TODO reduce to 10k
+const kAlphaIncrements = 100_000; // TODO reduce to 10k
 const [info, device] = await (async () => {
     const adapter = await navigator.gpu?.requestAdapter();
-    const device = await adapter?.requestDevice({
-        requiredLimits: { maxBufferSize: 1024001024 },
-    });
+    const device = await adapter?.requestDevice();
     quitIfWebGPUNotAvailable(adapter, device);
     return [adapter.info, device];
 })();
