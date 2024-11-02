@@ -1,6 +1,3 @@
-// TODO: add a mode with very transparent leaves (like the gradient sample but arranged like foliage)
-// TODO: different color for each leaf in the foliage example
-// TODO: add a mode to the gradient that does alpha blending as a reference result
 import { GUI } from 'dat.gui';
 
 import showMultisampleTextureWGSL from './showMultisampleTexture.wgsl';
