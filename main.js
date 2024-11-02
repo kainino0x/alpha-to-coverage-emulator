@@ -8846,9 +8846,6 @@ class Foliage extends FoliageCommon {
     }
 }
 
-// TODO: add a mode with very transparent leaves (like the gradient sample but arranged like foliage)
-// TODO: different color for each leaf in the foliage example
-// TODO: add a mode to the gradient that does alpha blending as a reference result
 const canvas = document.querySelector('canvas');
 const device = await (async () => {
     const adapter = await navigator.gpu?.requestAdapter();
