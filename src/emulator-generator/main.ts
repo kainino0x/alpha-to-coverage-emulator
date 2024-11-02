@@ -46,7 +46,7 @@ const quadPipeline = device.createRenderPipeline({
   layout: 'auto',
   vertex: {
     module: quadModule,
-    constants: { alphaIncrements: kAlphaIncrements },
+    constants: { kAlphaIncrements },
   },
   fragment: { module: quadModule, targets: [{ format: 'rgba8unorm' }] },
   multisample: { count: kSampleCount, alphaToCoverageEnabled: true },
@@ -56,7 +56,10 @@ const quadPipeline = device.createRenderPipeline({
 const copyModule = device.createShaderModule({ code: copyMaskToBufferWGSL });
 const copyPipeline = device.createComputePipeline({
   label: 'copyPipeline',
-  compute: { module: copyModule },
+  compute: {
+    module: copyModule,
+    constants: { kSize, kSampleCount },
+  },
   layout: 'auto',
 });
 const copyBindGroup = device.createBindGroup({
@@ -93,7 +96,7 @@ for (let alphaStep = 0; alphaStep <= kAlphaIncrements; ++alphaStep) {
     const pass = enc.beginComputePass();
     pass.setPipeline(copyPipeline);
     pass.setBindGroup(0, copyBindGroup);
-    pass.dispatchWorkgroups(1, 1);
+    pass.dispatchWorkgroups(kSize / 8, kSize / 8);
     pass.end();
   }
   // Copy the buffer to a mappable readback buffer
@@ -113,7 +116,7 @@ for (let alphaStep = 0; alphaStep <= kAlphaIncrements; ++alphaStep) {
 }
 
 // Read back the buffer and extract the results
-let results: Array<{ startAlpha: number; pattern: number[] }> = [];
+const results: Array<{ startAlpha: number; pattern: number[] }> = [];
 let lastSeenPatternString = '';
 {
   await readbackBuffer.mapAsync(GPUMapMode.READ);
@@ -188,7 +191,7 @@ sLoop: for (let s = 1; s < kSize; s *= 2) {
 }
 
 // Generate the shader!
-let infoString =
+const infoString =
   `${info.vendor} ${info.architecture} ${info.device} ${info.description}`.trim();
 let out = `\
 // ${infoString}

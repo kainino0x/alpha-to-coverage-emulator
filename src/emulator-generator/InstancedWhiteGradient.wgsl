@@ -2,8 +2,8 @@
 
 // Number of steps such that:
 // instance_index=0 -> alpha=0
-// instance_index=alphaIncrements -> alpha=1
-override alphaIncrements: f32;
+// instance_index=kAlphaIncrements -> alpha=1
+override kAlphaIncrements: f32;
 
 @vertex
 fn vmain(
@@ -16,7 +16,7 @@ fn vmain(
     vec2f( 1, -1), vec2f(-1,  1), vec2f( 1,  1),
   );
 
-  let alpha = f32(instance_index) / alphaIncrements;
+  let alpha = f32(instance_index) / kAlphaIncrements;
   return Varying(vec4(square[vertex_index % 6], 0, 1), alpha);
 }
 
