@@ -337,11 +337,11 @@ for (let i = 0; i < results.length - 1; ++i) {
     const alphaFraction = `${alphaNumerator} / ${halfDenominator}.0`;
     if (patternSize === 1) {
         const mask = `0x${pattern[0].toString(16)}`;
-        out += `  if (alpha ${cmp} ${alphaFraction}) { return ${mask}; }\n`;
+        out += `  if alpha ${cmp} ${alphaFraction} { return ${mask}; }\n`;
     }
     else {
         const array = Array.from(pattern, (v) => '0x' + v.toString(16)).join(', ');
-        out += `  if (alpha ${cmp} ${alphaFraction}) { return array(${array}u)[i]; }\n`;
+        out += `  if alpha ${cmp} ${alphaFraction} { return array(${array}u)[i]; }\n`;
     }
 }
 out += `\
