@@ -120,40 +120,6 @@ export const kEmulatedAlphaToCoverage = {
       if alpha < 31 / 32.0 { return array(0xf, 0xf, 0x7, 0xfu)[i]; }
       return 0xf;
     }`,
-  '(??) AMD Radeon PRO WX 3200': `\
-    fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
-      let i = (xy.y % 2) * 2 + (xy.x % 2);
-      // TODO: this is probably spaced very incorrectly
-      if alpha <  1 / 29.0 { return ${0b0000}; }
-      if alpha <  2 / 29.0 { return array(${0b0100}u, ${0b0000}, ${0b0000}, ${0b0000})[i]; }
-      if alpha <  3 / 29.0 { return array(${0b0010}u, ${0b0000}, ${0b0000}, ${0b0000})[i]; }
-      if alpha <  4 / 29.0 { return array(${0b0010}u, ${0b0000}, ${0b0000}, ${0b0100})[i]; }
-      if alpha <  5 / 29.0 { return array(${0b0001}u, ${0b0000}, ${0b0000}, ${0b0100})[i]; }
-      if alpha <  6 / 29.0 { return array(${0b0001}u, ${0b0100}, ${0b0000}, ${0b0100})[i]; }
-      if alpha <  7 / 29.0 { return array(${0b0001}u, ${0b0100}, ${0b0000}, ${0b0010})[i]; }
-      if alpha <  8 / 29.0 { return array(${0b0001}u, ${0b0100}, ${0b0100}, ${0b0010})[i]; }
-      if alpha <  9 / 29.0 { return array(${0b0101}u, ${0b0100}, ${0b0100}, ${0b0010})[i]; }
-      if alpha < 10 / 29.0 { return array(${0b0101}u, ${0b0010}, ${0b0100}, ${0b0010})[i]; }
-      if alpha < 11 / 29.0 { return array(${0b0101}u, ${0b0010}, ${0b0100}, ${0b0110})[i]; }
-      if alpha < 12 / 29.0 { return array(${0b0101}u, ${0b0010}, ${0b0100}, ${0b0101})[i]; }
-      if alpha < 13 / 29.0 { return array(${0b0101}u, ${0b0110}, ${0b0100}, ${0b0101})[i]; }
-      if alpha < 14 / 29.0 { return array(${0b0101}u, ${0b0110}, ${0b0010}, ${0b0101})[i]; }
-      if alpha < 15 / 29.0 { return array(${0b0101}u, ${0b0110}, ${0b0110}, ${0b0101})[i]; }
-      if alpha < 16 / 29.0 { return array(${0b1101}u, ${0b0110}, ${0b0110}, ${0b0101})[i]; }
-      if alpha < 17 / 29.0 { return array(${0b0111}u, ${0b0110}, ${0b0110}, ${0b0101})[i]; }
-      if alpha < 18 / 29.0 { return array(${0b0111}u, ${0b0110}, ${0b0110}, ${0b1101})[i]; }
-      if alpha < 19 / 29.0 { return array(${0b0111}u, ${0b0101}, ${0b0110}, ${0b1101})[i]; }
-      if alpha < 20 / 29.0 { return array(${0b0111}u, ${0b1101}, ${0b0110}, ${0b1101})[i]; }
-      if alpha < 21 / 29.0 { return array(${0b0111}u, ${0b1101}, ${0b0110}, ${0b0111})[i]; }
-      if alpha < 22 / 29.0 { return array(${0b0111}u, ${0b1101}, ${0b1110}, ${0b0111})[i]; }
-      if alpha < 23 / 29.0 { return array(${0b1111}u, ${0b1101}, ${0b1110}, ${0b0111})[i]; }
-      if alpha < 24 / 29.0 { return array(${0b1111}u, ${0b0111}, ${0b1110}, ${0b0111})[i]; }
-      if alpha < 25 / 29.0 { return array(${0b1111}u, ${0b0111}, ${0b1110}, ${0b1111})[i]; }
-      if alpha < 26 / 29.0 { return array(${0b1111}u, ${0b0111}, ${0b1101}, ${0b1111})[i]; }
-      if alpha < 27 / 29.0 { return array(${0b1111}u, ${0b1111}, ${0b1101}, ${0b1111})[i]; }
-      if alpha < 28 / 29.0 { return array(${0b1111}u, ${0b1111}, ${0b0111}, ${0b1111})[i]; }
-      return ${0b1111};
-    }`,
 };
 
 export type DeviceName = keyof typeof kEmulatedAlphaToCoverage;
