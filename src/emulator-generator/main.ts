@@ -144,11 +144,15 @@ let lastSeenPatternString = '';
 let halfDenominator = kAlphaIncrements; // use this if we can't find better
 const kAllowedError = 1 / kAlphaIncrements;
 {
-  const kCandidateDenominators = [
-    // Powers of 4, plus or minus 1
-    3, 4, 5, 15, 16, 17, 63, 64, 65, 255, 256, 257, 1023, 1024, 1025, 4095,
-    4096, 4097,
-  ];
+  const kCandidateDenominators = Array.from(
+    // Powers of 2, and powers of 2 minus one
+    (function* () {
+      for (let d = 4; d <= 4096; d *= 2) {
+        yield d - 1;
+        yield d;
+      }
+    })()
+  );
   dLoop: for (const d of kCandidateDenominators) {
     // Check if this denominator works for all results
     for (let i = 0; i < results.length; ++i) {
