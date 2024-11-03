@@ -335,11 +335,12 @@ for (let i = 0; i < results.length - 1; ++i) {
     const cmp = tieBreakDownward ? '<=' : '<';
     const alphaNumerator = Math.round(endAlpha * halfDenominator * 2) / 2;
     const alphaFraction = `${alphaNumerator} / ${halfDenominator}.0`;
-    const array = Array.from(pattern, (v) => '0x' + v.toString(16)).join(', ');
     if (patternSize === 1) {
-        out += `  if (alpha ${cmp} ${alphaFraction}) { return ${array[0]}u; }\n`;
+        const mask = `0x${pattern[0].toString(16)}`;
+        out += `  if (alpha ${cmp} ${alphaFraction}) { return ${mask}; }\n`;
     }
     else {
+        const array = Array.from(pattern, (v) => '0x' + v.toString(16)).join(', ');
         out += `  if (alpha ${cmp} ${alphaFraction}) { return array(${array}u)[i]; }\n`;
     }
 }
