@@ -129,7 +129,7 @@ const output = document.getElementById('output');
 // Render target size. It's the maximum pattern size we can detect.
 const kSize = 16;
 const kSampleCount = 4;
-const kAlphaIncrements = 100_000; // TODO reduce to 10k
+const kAlphaIncrements = 25_000;
 const [info, device] = await (async () => {
     const adapter = await navigator.gpu?.requestAdapter();
     const device = await adapter?.requestDevice();
@@ -246,7 +246,8 @@ const kAllowedError = 1 / kAlphaIncrements;
 {
     const kCandidateDenominators = [
         // Powers of 4, plus or minus 1
-        3, 4, 5, 15, 16, 17, 63, 64, 65, 255, 256, 257, 1023, 1024, 1025,
+        3, 4, 5, 15, 16, 17, 63, 64, 65, 255, 256, 257, 1023, 1024, 1025, 4095,
+        4096, 4097,
     ];
     dLoop: for (const d of kCandidateDenominators) {
         // Check if this denominator works for all results
