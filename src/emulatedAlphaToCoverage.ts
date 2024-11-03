@@ -94,6 +94,7 @@ export const kEmulatedAlphaToCoverage = {
       if alpha <  5 / 32.0 { return array(0x1, 0x0, 0x0, 0x4u)[i]; }
       if alpha <  6 / 32.0 { return array(0x1, 0x4, 0x0, 0x4u)[i]; }
       if alpha <  7 / 32.0 { return array(0x1, 0x4, 0x0, 0x2u)[i]; }
+
       if alpha <  9 / 32.0 { return array(0x1, 0x4, 0x4, 0x2u)[i]; }
       if alpha < 10 / 32.0 { return array(0x5, 0x4, 0x4, 0x2u)[i]; }
       if alpha < 11 / 32.0 { return array(0x5, 0x2, 0x4, 0x2u)[i]; }
@@ -101,6 +102,7 @@ export const kEmulatedAlphaToCoverage = {
       if alpha < 13 / 32.0 { return array(0x5, 0x2, 0x4, 0x5u)[i]; }
       if alpha < 14 / 32.0 { return array(0x5, 0x6, 0x4, 0x5u)[i]; }
       if alpha < 15 / 32.0 { return array(0x5, 0x6, 0x2, 0x5u)[i]; }
+
       if alpha < 17 / 32.0 { return array(0x5, 0x6, 0x6, 0x5u)[i]; }
       if alpha < 18 / 32.0 { return array(0xd, 0x6, 0x6, 0x5u)[i]; }
       if alpha < 19 / 32.0 { return array(0x7, 0x6, 0x6, 0x5u)[i]; }
@@ -108,6 +110,7 @@ export const kEmulatedAlphaToCoverage = {
       if alpha < 21 / 32.0 { return array(0x7, 0x5, 0x6, 0xdu)[i]; }
       if alpha < 22 / 32.0 { return array(0x7, 0xd, 0x6, 0xdu)[i]; }
       if alpha < 23 / 32.0 { return array(0x7, 0xd, 0x6, 0x7u)[i]; }
+
       if alpha < 25 / 32.0 { return array(0x7, 0xd, 0xe, 0x7u)[i]; }
       if alpha < 26 / 32.0 { return array(0xf, 0xd, 0xe, 0x7u)[i]; }
       if alpha < 27 / 32.0 { return array(0xf, 0x7, 0xe, 0x7u)[i]; }
