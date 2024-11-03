@@ -268,13 +268,16 @@ const kAllowedError = 1 / kAlphaIncrements;
             // This is a good candidate, now check if it tie-breaks consistently.
             // If it fails without the extra threshold, that means the device might be
             // tie-breaking upward (so we found the threshold one step too late).
-            const tieBreakUpwardAtValue = delta > kAllowedError;
-            if (tieBreakUpwardSoFar === undefined) {
-                tieBreakUpwardSoFar = tieBreakUpwardAtValue;
-            }
-            else {
-                if (tieBreakUpwardAtValue !== tieBreakUpwardSoFar) {
-                    continue dLoop;
+            // (skip 0 because that's not a real threshold)
+            if (i > 0) {
+                const tieBreakUpwardAtValue = delta > kAllowedError;
+                if (tieBreakUpwardSoFar === undefined) {
+                    tieBreakUpwardSoFar = tieBreakUpwardAtValue;
+                }
+                else {
+                    if (tieBreakUpwardAtValue !== tieBreakUpwardSoFar) {
+                        continue dLoop;
+                    }
                 }
             }
         }
