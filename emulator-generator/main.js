@@ -270,7 +270,7 @@ const kAllowedError = 1 / kAlphaIncrements;
             // tie-breaking upward (so we found the threshold one step too late).
             // (skip i=0 because that's not a real threshold)
             if (i > 0) {
-                const tieBreakDownwardAtValue = delta > kAllowedError * 0.5;
+                const tieBreakDownwardAtValue = delta > kAllowedError * 0.999;
                 if (tieBreakDownwardSoFar === undefined) {
                     tieBreakDownwardSoFar = tieBreakDownwardAtValue;
                 }
@@ -316,8 +316,12 @@ const infoString = `${info.vendor} ${info.architecture} ${info.device} ${info.de
 let out = `\
 // ${infoString}
 fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
+`;
+if (patternSize > 1) {
+    out += `\
   let i = (xy.y % ${patternSize}) * ${patternSize} + (xy.x % ${patternSize});
 `;
+}
 for (let i = 0; i < results.length - 1; ++i) {
     const endAlpha = results[i + 1].startAlpha;
     const capturedPattern = results[i].pattern;
@@ -332,7 +336,12 @@ for (let i = 0; i < results.length - 1; ++i) {
     const alphaNumerator = Math.round(endAlpha * halfDenominator * 2) / 2;
     const alphaFraction = `${alphaNumerator} / ${halfDenominator}.0`;
     const array = Array.from(pattern, (v) => '0x' + v.toString(16)).join(', ');
-    out += `  if (alpha ${cmp} ${alphaFraction}) { return array(${array}u)[i]; }\n`;
+    if (patternSize === 1) {
+        out += `  if (alpha ${cmp} ${alphaFraction}) { return ${array[0]}u; }\n`;
+    }
+    else {
+        out += `  if (alpha ${cmp} ${alphaFraction}) { return array(${array}u)[i]; }\n`;
+    }
 }
 out += `\
   return 0xf;

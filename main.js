@@ -2684,6 +2684,15 @@ const kEmulatedAlphaToCoverage = {
       return 0xf;
     }
   `.trimEnd(),
+    'Intel HD Graphics 4400': `\
+    fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
+      if (alpha <= 0.5 / 4.0) { return 0x0u; }
+      if (alpha <= 1.5 / 4.0) { return 0x1u; }
+      if (alpha <= 2.5 / 4.0) { return 0x3u; }
+      if (alpha <= 3.5 / 4.0) { return 0x7u; }
+      return 0xf;
+    }
+  `.trimEnd(),
     'ARM Mali-G78': `\
     fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
       let i = (xy.y % 2) * 2 + (xy.x % 2);
