@@ -2674,14 +2674,14 @@ const kEmulatedAlphaToCoverage = {
       return 0xf;
     }
   `.trimEnd(),
-    '(?) NVIDIA GeForce RTX 3070': `\
+    'NVIDIA GeForce RTX 3070': `\
     fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
-      // TODO: this isn't verified yet
-      if (alpha < 0.5 / 4) { return ${0b0000}; }
-      if (alpha < 1.5 / 4) { return ${0b1000}; }
-      if (alpha < 2.5 / 4) { return ${0b1001}; }
-      if (alpha < 3.5 / 4) { return ${0b1011}; }
-      return ${0b1111};
+      let i = (xy.y % 1) * 1 + (xy.x % 1);
+      if (alpha < 506 / 4096.0) { return array(0x0u)[i]; }
+      if (alpha < 1534 / 4096.0) { return array(0x8u)[i]; }
+      if (alpha < 2563 / 4096.0) { return array(0x9u)[i]; }
+      if (alpha < 3591 / 4096.0) { return array(0xbu)[i]; }
+      return 0xf;
     }
   `.trimEnd(),
     'ARM Mali-G78': `\
