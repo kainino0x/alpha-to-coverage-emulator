@@ -142,6 +142,7 @@ let lastSeenPatternString = '';
 
 // Try to determine a denominator for the alpha values we saw.
 let halfDenominator = kAlphaIncrements; // use this if we can't find better
+let tieBreakDownward = false;
 const kAllowedError = 1 / kAlphaIncrements;
 {
   const kCandidateDenominators = Array.from(
@@ -153,18 +154,40 @@ const kAllowedError = 1 / kAlphaIncrements;
       }
     })()
   );
+  // Whether
+  let tieBreakDownwardSoFar: boolean | undefined;
   dLoop: for (const d of kCandidateDenominators) {
     // Check if this denominator works for all results
     for (let i = 0; i < results.length; ++i) {
       const { startAlpha } = results[i];
       const numerator = Math.floor(startAlpha * d * 2) / 2;
-      if (startAlpha - numerator / d > kAllowedError) {
+
+      const delta = startAlpha - numerator / d;
+      // Extra tolerance accepts thresholds that tie break up or down.
+      if (delta > kAllowedError * 1.0001) {
         continue dLoop;
+      }
+
+      // This is a good candidate, now check if it tie-breaks consistently.
+      // If it fails without the extra threshold, that means the device might be
+      // tie-breaking upward (so we found the threshold one step too late).
+
+      // (skip i=0 because that's not a real threshold)
+      if (i > 0) {
+        const tieBreakDownwardAtValue = delta > kAllowedError * 0.999;
+        if (tieBreakDownwardSoFar === undefined) {
+          tieBreakDownwardSoFar = tieBreakDownwardAtValue;
+        } else {
+          if (tieBreakDownwardAtValue !== tieBreakDownwardSoFar) {
+            continue dLoop;
+          }
+        }
       }
     }
 
     // If we haven't continue'd, we found a good value!
     halfDenominator = d;
+    tieBreakDownward = tieBreakDownwardSoFar!;
     break;
   }
 }
@@ -201,8 +224,12 @@ const infoString =
 let out = `\
 // ${infoString}
 fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
+`;
+if (patternSize > 1) {
+  out += `\
   let i = (xy.y % ${patternSize}) * ${patternSize} + (xy.x % ${patternSize});
 `;
+}
 for (let i = 0; i < results.length - 1; ++i) {
   const endAlpha = results[i + 1].startAlpha;
   const capturedPattern = results[i].pattern;
@@ -215,10 +242,16 @@ for (let i = 0; i < results.length - 1; ++i) {
     }
   }
 
+  const cmp = tieBreakDownward ? '<=' : '<';
   const alphaNumerator = Math.round(endAlpha * halfDenominator * 2) / 2;
   const alphaFraction = `${alphaNumerator} / ${halfDenominator}.0`;
-  const array = Array.from(pattern, (v) => '0x' + v.toString(16)).join(', ');
-  out += `  if (alpha < ${alphaFraction}) { return array(${array}u)[i]; }\n`;
+  if (patternSize === 1) {
+    const mask = `0x${pattern[0].toString(16)}`;
+    out += `  if (alpha ${cmp} ${alphaFraction}) { return ${mask}; }\n`;
+  } else {
+    const array = Array.from(pattern, (v) => '0x' + v.toString(16)).join(', ');
+    out += `  if (alpha ${cmp} ${alphaFraction}) { return array(${array}u)[i]; }\n`;
+  }
 }
 out += `\
   return 0xf;
