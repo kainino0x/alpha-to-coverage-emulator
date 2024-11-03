@@ -2672,8 +2672,7 @@ const kEmulatedAlphaToCoverage = {
       if alpha < 231.5 / 255.0 { return array(0xf, 0xb, 0xb, 0xfu)[i]; }
       if alpha < 247.5 / 255.0 { return array(0xf, 0xf, 0xb, 0xfu)[i]; }
       return 0xf;
-    }
-  `.trimEnd(),
+    }`,
     'NVIDIA GeForce RTX 3070': `\
     fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
       if alpha <  253.0 / 2048.0 { return 0x0; }
@@ -2681,8 +2680,7 @@ const kEmulatedAlphaToCoverage = {
       if alpha < 1281.5 / 2048.0 { return 0x9; }
       if alpha < 1795.5 / 2048.0 { return 0xb; }
       return 0xf;
-    }
-  `.trimEnd(),
+    }`,
     'Intel HD Graphics 4400': `\
     fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
       if alpha <= 0.5 / 4.0 { return 0x0; }
@@ -2690,8 +2688,7 @@ const kEmulatedAlphaToCoverage = {
       if alpha <= 2.5 / 4.0 { return 0x3; }
       if alpha <= 3.5 / 4.0 { return 0x7; }
       return 0xf;
-    }
-  `.trimEnd(),
+    }`,
     'ARM Mali-G78': `\
     fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
       let i = (xy.y % 2) * 2 + (xy.x % 2);
@@ -2712,8 +2709,7 @@ const kEmulatedAlphaToCoverage = {
       if alpha < 14.5 / 16.0 { return array(0xf, 0xf, 0xe, 0x7u)[i]; }
       if alpha < 15.5 / 16.0 { return array(0xf, 0xf, 0xe, 0xfu)[i]; }
       return 0xf;
-    }
-  `.trimEnd(),
+    }`,
     'Qualcomm Adreno 630': `\
     fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
       let i = (xy.y % 4) * 4 + (xy.x % 4);
@@ -2735,8 +2731,40 @@ const kEmulatedAlphaToCoverage = {
       if alpha < 239.5 / 255.0 { return array(0xf, 0xf, 0xf, 0xe, 0xf, 0xe, 0xf, 0xf, 0x7, 0xf, 0xf, 0xf, 0xf, 0xf, 0xd, 0xfu)[i]; }
       if alpha < 254.5 / 255.0 { return array(0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xb, 0xf, 0xf, 0xf, 0xf, 0xfu)[i]; }
       return 0xf;
-    }
-  `.trimEnd(),
+    }`,
+    'AMD Radeon RX 580': `\
+    fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
+      let i = (xy.y % 2) * 2 + (xy.x % 2);
+      if alpha <  1 / 32.0 { return array(0x0, 0x0, 0x0, 0x0u)[i]; }
+      if alpha <  2 / 32.0 { return array(0x4, 0x0, 0x0, 0x0u)[i]; }
+      if alpha <  3 / 32.0 { return array(0x2, 0x0, 0x0, 0x0u)[i]; }
+      if alpha <  4 / 32.0 { return array(0x2, 0x0, 0x0, 0x4u)[i]; }
+      if alpha <  5 / 32.0 { return array(0x1, 0x0, 0x0, 0x4u)[i]; }
+      if alpha <  6 / 32.0 { return array(0x1, 0x4, 0x0, 0x4u)[i]; }
+      if alpha <  7 / 32.0 { return array(0x1, 0x4, 0x0, 0x2u)[i]; }
+      if alpha <  9 / 32.0 { return array(0x1, 0x4, 0x4, 0x2u)[i]; }
+      if alpha < 10 / 32.0 { return array(0x5, 0x4, 0x4, 0x2u)[i]; }
+      if alpha < 11 / 32.0 { return array(0x5, 0x2, 0x4, 0x2u)[i]; }
+      if alpha < 12 / 32.0 { return array(0x5, 0x2, 0x4, 0x6u)[i]; }
+      if alpha < 13 / 32.0 { return array(0x5, 0x2, 0x4, 0x5u)[i]; }
+      if alpha < 14 / 32.0 { return array(0x5, 0x6, 0x4, 0x5u)[i]; }
+      if alpha < 15 / 32.0 { return array(0x5, 0x6, 0x2, 0x5u)[i]; }
+      if alpha < 17 / 32.0 { return array(0x5, 0x6, 0x6, 0x5u)[i]; }
+      if alpha < 18 / 32.0 { return array(0xd, 0x6, 0x6, 0x5u)[i]; }
+      if alpha < 19 / 32.0 { return array(0x7, 0x6, 0x6, 0x5u)[i]; }
+      if alpha < 20 / 32.0 { return array(0x7, 0x6, 0x6, 0xdu)[i]; }
+      if alpha < 21 / 32.0 { return array(0x7, 0x5, 0x6, 0xdu)[i]; }
+      if alpha < 22 / 32.0 { return array(0x7, 0xd, 0x6, 0xdu)[i]; }
+      if alpha < 23 / 32.0 { return array(0x7, 0xd, 0x6, 0x7u)[i]; }
+      if alpha < 25 / 32.0 { return array(0x7, 0xd, 0xe, 0x7u)[i]; }
+      if alpha < 26 / 32.0 { return array(0xf, 0xd, 0xe, 0x7u)[i]; }
+      if alpha < 27 / 32.0 { return array(0xf, 0x7, 0xe, 0x7u)[i]; }
+      if alpha < 28 / 32.0 { return array(0xf, 0x7, 0xe, 0xfu)[i]; }
+      if alpha < 29 / 32.0 { return array(0xf, 0x7, 0xd, 0xfu)[i]; }
+      if alpha < 30 / 32.0 { return array(0xf, 0xf, 0xd, 0xfu)[i]; }
+      if alpha < 31 / 32.0 { return array(0xf, 0xf, 0x7, 0xfu)[i]; }
+      return 0xf;
+    }`,
     '(??) AMD Radeon PRO WX 3200': `\
     fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
       let i = (xy.y % 2) * 2 + (xy.x % 2);
@@ -2770,8 +2798,7 @@ const kEmulatedAlphaToCoverage = {
       if alpha < 27 / 29.0 { return array(${0b1111}u, ${0b1111}, ${0b1101}, ${0b1111})[i]; }
       if alpha < 28 / 29.0 { return array(${0b1111}u, ${0b1111}, ${0b0111}, ${0b1111})[i]; }
       return ${0b1111};
-    }
-  `.trimEnd(),
+    }`,
 };
 const kEmulatedAlphaTest = `\
   fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
