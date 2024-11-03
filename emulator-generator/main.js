@@ -242,7 +242,7 @@ let lastSeenPatternString = '';
 }
 // Try to determine a denominator for the alpha values we saw.
 let halfDenominator = kAlphaIncrements; // use this if we can't find better
-let tieBreakUpward = false;
+let tieBreakDownward = false;
 const kAllowedError = 1 / kAlphaIncrements;
 {
     const kCandidateDenominators = Array.from(
@@ -254,7 +254,7 @@ const kAllowedError = 1 / kAlphaIncrements;
         }
     })());
     // Whether
-    let tieBreakUpwardSoFar;
+    let tieBreakDownwardSoFar;
     dLoop: for (const d of kCandidateDenominators) {
         // Check if this denominator works for all results
         for (let i = 0; i < results.length; ++i) {
@@ -268,14 +268,14 @@ const kAllowedError = 1 / kAlphaIncrements;
             // This is a good candidate, now check if it tie-breaks consistently.
             // If it fails without the extra threshold, that means the device might be
             // tie-breaking upward (so we found the threshold one step too late).
-            // (skip 0 because that's not a real threshold)
+            // (skip i=0 because that's not a real threshold)
             if (i > 0) {
-                const tieBreakUpwardAtValue = delta > kAllowedError;
-                if (tieBreakUpwardSoFar === undefined) {
-                    tieBreakUpwardSoFar = tieBreakUpwardAtValue;
+                const tieBreakDownwardAtValue = delta > kAllowedError * 0.5;
+                if (tieBreakDownwardSoFar === undefined) {
+                    tieBreakDownwardSoFar = tieBreakDownwardAtValue;
                 }
                 else {
-                    if (tieBreakUpwardAtValue !== tieBreakUpwardSoFar) {
+                    if (tieBreakDownwardAtValue !== tieBreakDownwardSoFar) {
                         continue dLoop;
                     }
                 }
@@ -283,7 +283,7 @@ const kAllowedError = 1 / kAlphaIncrements;
         }
         // If we haven't continue'd, we found a good value!
         halfDenominator = d;
-        tieBreakUpward = tieBreakUpwardSoFar;
+        tieBreakDownward = tieBreakDownwardSoFar;
         break;
     }
 }
@@ -328,7 +328,7 @@ for (let i = 0; i < results.length - 1; ++i) {
             pattern.push(capturedPattern[y * kSize + x]);
         }
     }
-    const cmp = tieBreakUpward ? '<=' : '<';
+    const cmp = tieBreakDownward ? '<=' : '<';
     const alphaNumerator = Math.round(endAlpha * halfDenominator * 2) / 2;
     const alphaFraction = `${alphaNumerator} / ${halfDenominator}.0`;
     const array = Array.from(pattern, (v) => '0x' + v.toString(16)).join(', ');
