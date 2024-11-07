@@ -8877,6 +8877,7 @@ class Foliage extends FoliageCommon {
 // TODO add a way to verify emulator-generator locally (maybe add an placeholder device to the list, and embed a button that runs the generator in a popup dialog and then writes the result into kEmulatedAlphaToCoverage) - and instructions to submit new results, maybe a prefilled github issue link
 // TODO add presets for emulated devices
 // TODO add a lot of help text - maybe in the form of a blog article with embedded visualizations with different presets
+// TODO add a dropdown for sample count even though the only allowed count is 4
 const canvas = document.querySelector('canvas');
 const device = await (async () => {
     const adapter = await navigator.gpu?.requestAdapter();
