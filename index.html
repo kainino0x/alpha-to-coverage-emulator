@@ -1,28 +1,297 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=600" />
     <title>Alpha-to-Coverage Emulator</title>
     <style>
       :root {
-        color-scheme: light dark;
+        color-scheme: dark;
       }
-      html, body {
-        margin: 0;      /* remove default margin */
-        height: 100%;   /* make body fill the browser window */
-        display: flex;
-        place-content: center center;
+      * {
+        box-sizing: border-box;
       }
+      html,
+      body {
+        margin: 0; /* remove default margin */
+        height: 100%; /* make body fill the browser window */
+      }
+
+      #left,
+      #right {
+        position: fixed;
+        height: 100vh;
+        top: 0;
+      }
+      #left {
+        left: 0;
+        width: 70vw;
+      }
+      #right {
+        right: 0;
+        width: 30vw;
+        min-width: 200px;
+        padding: 0.5em 0.5em 90vh 0.5em;
+        overflow-x: hidden;
+        overflow-y: scroll;
+        overflow-wrap: anywhere;
+        background: rgb(0 0 0 / 50%);
+      }
+
       canvas {
-        width: min(100vw, 100vh);
-        height: min(100vw, 100vh);
+        width: min(70vw - 1em, 100vh);
+        height: min(70vw - 1em, 100vh);
         display: block;
+        position: absolute;
+        left: 0.5em;
+        bottom: 0.5em;
+      }
+      #guibox {
+        position: absolute;
+        top: 0;
+        right: 0;
+      }
+
+      /* target of the current url#hash */
+      :target {
+        color: green;
+        text-decoration-style: wavy;
       }
     </style>
     <script defer type="module" src="./main.js"></script>
   </head>
   <body>
-    <canvas></canvas>
+    <div id="left">
+      <canvas></canvas>
+      <div id="guibox"></div>
+    </div>
+    <div id="right">
+      <h1>Alpha-to-Coverage Inspector/Emulator</h1>
+
+      <p>
+        Alpha-to-coverage is a GPU hardware feature which approximates
+        alpha-blending using MSAA (multi-sample antialiasing) &mdash;
+        essentially an anti-aliased version of alpha-testing, as a cheap
+        alternative to order-independent transparency (OIT) techniques.
+      </p>
+      <p>
+        This article is an interactive visualization based on
+        <a
+          href="https://bgolus.medium.com/anti-aliased-alpha-test-the-esoteric-alpha-to-coverage-8b177335ae4f"
+          ><em>Anti-aliased Alpha Test: The Esoteric Alpha To Coverage</em></a
+        >
+        by Ben Golus.
+      </p>
+      <p>
+        The source of this demo is
+        <a href="https://github.com/kainino0x/alpha-to-coverage-emulator"
+          >on GitHub</a
+        >!
+      </p>
+      <p>
+        There are several components to this demo/visualization. They are
+        demonstrated in various "presets", each with an accompanying section of
+        the article. The resolution of the visualization defaults to one where
+        you can clearly see the resulting pixels. At any time you can adjust any
+        of the options &mdash; including the resolution, using the "size"
+        slider, which goes from 1&times;1 to 8192&times;8192 (up to your canvas
+        resolution).
+      </p>
+
+      <h2>
+        Click the header links (or the buttons under "presets" on the left) to
+        activate each preset from the article!
+      </h2>
+
+      <hr />
+
+      <h2><a id="foliageA2C">loading...</a></h2>
+      <p>
+        This is a visualization of a "bush" made of "leaves" using my
+        understanding of the alpha-to-coverage technique described by Golus.
+      </p>
+
+      <h2><a id="foliageAlphaTest">loading...</a></h2>
+      <p>
+        And this is the aliased version of the same thing &mdash; using
+        alpha-testing instead of alpha-to-coverage.
+      </p>
+
+      <h2><a id="foliageBlend">loading...</a></h2>
+      <p>
+        Just for fun, this shows the bush rendered using alpha-blending without
+        any kind of order-independent transparency. The leaves are painted in
+        entirely the wrong order.
+      </p>
+
+      <h2><a id="oneGradientBlend">loading...</a></h2>
+      <p>
+        Now, let's dive into some scenes that show how alpha-to-coverage works.
+        We'll do this by rendering a few transparency-gradients on top of each
+        other. This scene renders one white quad (on a black background) with an
+        alpha gradient from 0% at the top to 100% at the bottom...
+      </p>
+
+      <h2><a id="overlappingGradientsBlend">loading...</a></h2>
+      <p>
+        ... and this scene plops a <em>black</em> quad on top, this time with an
+        alpha gradient from 0% on the let to 100% on the right.
+      </p>
+      <p>
+        Here we can see the "ideal" result for this scene. However,
+        alpha-blending is order-dependent, so this only works because we have
+        drawn our geometry in the correct order. Instead, we would like to avoid
+        blending, so that we can rely on the depth test to "sort" our geometry
+        for us.
+      </p>
+
+      <h2><a id="overlappingGradientsAlphaTest">loading...</a></h2>
+      <p>
+        A simple alpha-test (displaying a fragment if alpha &gt; 50%, and
+        discarding it if alpha &lt; 50%)... sort of works, but the quality (in a
+        scene like this) is extremely low.
+      </p>
+      <p>
+        But we're using MSAA! We don't have to deal in binaries &mdash; if this
+        were real geometry, we wouldn't have to answer "yes"/"no" for whether
+        each pixel is covered by the geometry. Instead, each of the samples in
+        each pixel would have its own coverage bit. Let's zoom in...
+      </p>
+
+      <h2><a id="overlappingGradientsAlphaTestZoomed">loading...</a></h2>
+      <p>
+        Here, we can see each individual sample in our 4xMSAA render target. We
+        have quite a bit more resolution to work with. In the fragment shader
+        (which runs just once per pixel), we can actually output a "sample mask"
+        which tells the GPU which individual samples to keep/discard &mdash;
+        without having to run the fragment shader once for every sample (which
+        is also possible). We can see that the alpha-test is essentially
+        producing either a sample mask of <code>0000</code> or
+        <code>1111</code>. But we could output 1, 2, or 3 samples as well...
+      </p>
+
+      <h2><a id="overlappingGradientsA2CNVIDIAZoomed">loading...</a></h2>
+      <p>
+        ... which is exactly what alpha-to-coverage will do for us! Here, we see
+        our first real alpha-to-coverage algorithm, the one used by one NVIDIA
+        GPU.
+      </p>
+      <p>
+        (Note the samples are arranged somewhat arbitrarily; that's OK, because
+        all the samples for a pixel get averaged together in the end anyway.)
+      </p>
+
+      <h2>
+        <a id="overlappingGradientsA2CNVIDIAZoomedResolved">loading...</a>
+      </h2>
+      <p>
+        When we average out the samples, we get results that look like this.
+        That's not a bad gradient!
+      </p>
+
+      <h2><a id="overlappingGradientsA2CNVIDIA">loading...</a></h2>
+      <p>Now we can zoom out and see the higher-resolution result.</p>
+      <p>
+        Well... it's alright, but it still looks pretty chunky. After all, with
+        4 bits, there are only 5 values we can work with (0, 1, 2, 3, or 4
+        samples covered). Some GPU architectures improve this by applying
+        dithering patterns that repeat over 2&times;2 or even 4&times;4 pixel
+        areas, providing average "bit depths" of 16 or 64, respectively.
+      </p>
+
+      <h2>
+        <a id="overlappingGradientsA2CQualcommZoomedResolved">loading...</a>
+      </h2>
+      <p>
+        Let's zoom back in and look at a different GPU architecture. This is the
+        4&times;4 dithered alpha-to-coverage pattern used by one Qualcomm Adreno
+        GPU.
+      </p>
+
+      <h2><a id="overlappingGradientsA2CQualcomm">loading...</a></h2>
+      <p>
+        Zoomed back out, that looks pretty nice! There are some odd artifacts,
+        but these disappear easily in a real scene. (Actually, as beautiful as
+        this is, even the differences between NVIDIA and Qualcomm disappear
+        quite easily in scene's I've tried.)
+      </p>
+
+      <h2><a id="blurryLeafNVIDIA">loading...</a></h2>
+      <p>
+        This circular gradient scene shows the banding/dithering in a more
+        natural scenario. Here on NVIDIA, with banding...
+      </p>
+
+      <h2><a id="blurryLeafApple">loading...</a></h2>
+      <p>... here on Apple, which uses a 2&times;2 dithering pattern.</p>
+
+      <h2><a id="blurryLeafQualcomm">loading...</a></h2>
+      <p>... here on Qualcomm, with 4&times;4 dithering.</p>
+
+      <h2><a id="blurryLeafNative">loading...</a></h2>
+      <p>
+        ... and here on your own GPU's native alpha-to-coverage algorithm (which
+        may or may not be one of the above).
+      </p>
+
+      <hr />
+
+      <p>
+        Finally, the following samples show an animated visualization of the
+        alpha-to-coverage patterns used on these GPUs &mdash; the scene shows a
+        single solid-color quad, animating alpha from 0% to 100%.
+      </p>
+
+      <h2><a id="solidInspectorNVIDIA">loading...</a></h2>
+
+      <h2><a id="solidInspectorApple">loading...</a></h2>
+
+      <h2><a id="solidInspectorQualcomm">loading...</a></h2>
+      <p>Wild!</p>
+
+      <h2><a id="solidInspectorNative">loading...</a></h2>
+
+      <hr />
+
+      <h2><a id="foliageBlurry">loading...</a></h2>
+      <p>
+        By default, the foliage demo uses a 1px feathered edge to produce an
+        antialiased but sharp edge. But at full resolution, the foliage demo
+        also looks neat with blurry-edged leaves, shown here. Try out various
+        emulation modes &mdash; they make a subtle difference!
+      </p>
+
+      <hr />
+
+      <h2>Technical Notes</h2>
+
+      <ul>
+        <li>
+          The visualizer uses some ShaderToy-style shader math in order to
+          visualize the contents of MSAA textures. It's very simple: we assume
+          the hardware uses the standard sample layout, and when rendering in a
+          circle around each of those points, we <code>textureLoad</code> from
+          the corresponding sample index and display that. Outside of those
+          circles, we show the color from the single-sampled resolve target
+          (which averages the 4 samples), or the grid lines.
+        </li>
+        <li>
+          This sample only supports 4xMSAA, because WebGPU only supports 4xMSAA.
+          Someday it will support more!
+        </li>
+        <li>
+          Emulation is very simple: instead of enabling alpha-to-coverage, we
+          disable it and output the <code>sample_mask</code> builtin instead.
+          The sample mask is generated by a function which carefully emulates
+          the behavior of some tested hardware. Figuring out this function is
+          the hard part &mdash; I also wrote the
+          <a href="emulator-generator/">Alpha-to-Coverage Emulator Generator</a>
+          which captures the behavior and then attempts to detect the block size
+          and the exact thresholds between steps. (Someday I'd like to integrate
+          that into this sample so you can capture and test emulation on a
+          device easily.)
+        </li>
+      </ul>
+    </div>
   </body>
 </html>

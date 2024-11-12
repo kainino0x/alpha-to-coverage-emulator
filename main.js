@@ -2895,6 +2895,8 @@ class CrossingGradients extends Scene {
         });
     }
     modifyConfigForAnimation(config) {
+        if (!config.CrossingGradients_animate)
+            return;
         // scrub alpha2 over 15 seconds
         const alpha = ((performance.now() / 15000) % 1) * (100 + 10) - 5;
         config.CrossingGradients_alpha2 = Math.max(0, Math.min(alpha, 100));
@@ -8819,19 +8821,20 @@ class FoliageCommon extends Scene {
         });
     }
     applyConfig(config) {
-        this.device.queue.writeBuffer(this.uniformBuffer, 0, getViewProjMatrix((config.Foliage_cameraRotation / 180) * Math.PI));
+        this.device.queue.writeBuffer(this.uniformBuffer, 0, getViewProjMatrix(config.Foliage_cameraDistanceLog, (config.Foliage_cameraRotation / 180) * Math.PI));
         this.device.queue.writeBuffer(this.uniformBuffer, 16 * Float32Array.BYTES_PER_ELEMENT, new Float32Array([config.FoliageCommon_featheringWidthPx]));
     }
     setBindGroup(pass) {
         pass.setBindGroup(0, this.bindGroup);
     }
 }
-function getViewProjMatrix(cameraRotationRad) {
+function getViewProjMatrix(cameraDistanceLog, cameraRotationRad) {
     const aspect = 1;
     const projectionMatrix = mat4.perspective((2 * Math.PI) / 5, aspect, 1, 2000.0);
+    const dist = 1.5 ** cameraDistanceLog;
     const upVector = vec3.fromValues(0, 1, 0);
     const look = vec3.fromValues(0, 0.5, 0);
-    const eyePosition = vec3.fromValues(0, 3, 8);
+    const eyePosition = vec3.fromValues(0, 3 * dist, 8 * dist);
     const rotation = mat4.rotateY(mat4.translation(look), cameraRotationRad);
     vec3.transformMat4(eyePosition, rotation, eyePosition);
     const viewMatrix = mat4.lookAt(eyePosition, look, upVector);
@@ -8857,6 +8860,8 @@ class Leaf extends FoliageCommon {
 
 class Foliage extends FoliageCommon {
     modifyConfigForAnimation(config) {
+        if (!config.Foliage_animate)
+            return;
         config.Foliage_cameraRotation = ((performance.now() / 60_000) % 1) * 360;
     }
     render(pass, mode, emulatedDevice) {
@@ -8873,11 +8878,7 @@ class Foliage extends FoliageCommon {
     }
 }
 
-// TODO add link to emulator-generator
 // TODO add a way to verify emulator-generator locally (maybe add an placeholder device to the list, and embed a button that runs the generator in a popup dialog and then writes the result into kEmulatedAlphaToCoverage) - and instructions to submit new results, maybe a prefilled github issue link
-// TODO add presets for emulated devices
-// TODO add a lot of help text - maybe in the form of a blog article with embedded visualizations with different presets
-// TODO add a dropdown for sample count even though the only allowed count is 4
 const canvas = document.querySelector('canvas');
 const device = await (async () => {
     const adapter = await navigator.gpu?.requestAdapter();
@@ -8908,7 +8909,7 @@ const kInitConfig = {
     mode: 'native',
     mode2: 'none',
     emulatedDevice: 'Apple M1 Pro',
-    showComparisonDot: false,
+    sampleCount: 4,
     sizeLog2: 8,
     showResolvedColor: true,
     CrossingGradients_gradient: true,
@@ -8916,14 +8917,19 @@ const kInitConfig = {
     CrossingGradients_alpha1: 0,
     CrossingGradients_color2: 0x0000ff,
     CrossingGradients_alpha2: 5,
+    CrossingGradients_animate: true,
     FoliageCommon_featheringWidthPx: 1,
+    Foliage_cameraDistanceLog: 0,
     Foliage_cameraRotation: 0,
-    animate: true,
+    Foliage_animate: true,
 };
 const config = { ...kInitConfig };
 const gui = new GUI$1();
+document.getElementById('guibox').appendChild(gui.domElement);
+gui.domElement.style.marginRight = '0';
 gui.width = 340;
 {
+    const leftSide = document.getElementById('left');
     let isFullscreen = false;
     const buttons = {
         fullscreen() {
@@ -8931,61 +8937,226 @@ gui.width = 340;
                 document.exitFullscreen();
             }
             else {
-                document.body.requestFullscreen();
+                leftSide.requestFullscreen();
             }
             isFullscreen = !isFullscreen;
         },
-        foliageDemo() {
-            Object.assign(config, kInitConfig);
-            updateDisplay();
-        },
-        leaf() {
-            Object.assign(config, kInitConfig);
-            config.scene = 'Leaf';
-            config.sizeLog2 = 7;
-            updateDisplay();
-        },
-        overlappingGradientsA2C() {
-            Object.assign(config, kInitConfig);
+    };
+    gui.add(buttons, 'fullscreen').name('toggle fullscreen');
+    const presets = gui.addFolder('Presets');
+    {
+        let sectionNumber = 1;
+        const btn = (key, name, fn) => {
+            const numberedName = `${sectionNumber++}. ${name}`;
+            const element = document.getElementById(key);
+            const trigger = () => {
+                Object.assign(config, kInitConfig);
+                fn();
+                enableDisableDevice();
+                showHideScenePanels();
+                gui.updateDisplay();
+                window.location.hash = key;
+            };
+            const hash = '#' + key;
+            if (window.location.hash === hash) {
+                setTimeout(trigger, 0);
+            }
+            presets.add({ [key]: trigger }, key).name(numberedName);
+            element.href = hash;
+            element.textContent = numberedName;
+            element.onclick = trigger;
+        };
+        btn('foliageA2C', 'foliage with alpha-to-coverage', //
+        () => { });
+        btn('foliageAlphaTest', 'foliage with alpha-test (aliased)', //
+        () => {
+            config.mode = 'alphatest';
+        });
+        btn('foliageBlend', 'foliage with blending (broken Z)', //
+        () => {
+            config.mode = 'blending';
+        });
+        btn('oneGradientBlend', 'one gradient (blending)', //
+        () => {
+            config.mode = 'blending';
             config.scene = 'CrossingGradients';
-            config.sizeLog2 = 8;
-            config.animate = false;
+            config.CrossingGradients_gradient = true;
+            config.CrossingGradients_color1 = 0xffffff;
+            config.CrossingGradients_alpha1 = 100;
+            config.CrossingGradients_color2 = 0x000000;
+            config.CrossingGradients_alpha2 = 0;
+            config.CrossingGradients_animate = false;
+        });
+        btn('overlappingGradientsBlend', 'overlapping gradients (blending)', //
+        () => {
+            config.mode = 'blending';
+            config.scene = 'CrossingGradients';
             config.CrossingGradients_gradient = true;
             config.CrossingGradients_color1 = 0xffffff;
             config.CrossingGradients_alpha1 = 100;
             config.CrossingGradients_color2 = 0x000000;
             config.CrossingGradients_alpha2 = 100;
-            updateDisplay();
-        },
-        overlappingGradientsBlend() {
-            this.overlappingGradientsA2C();
-            config.mode = 'blending';
-            updateDisplay();
-        },
-        solidInspector() {
-            Object.assign(config, kInitConfig);
+            config.CrossingGradients_animate = false;
+        });
+        btn('overlappingGradientsAlphaTest', 'overlapping gradients (alpha-test)', //
+        () => {
+            config.mode = 'alphatest';
+            config.scene = 'CrossingGradients';
+            config.CrossingGradients_gradient = true;
+            config.CrossingGradients_color1 = 0xffffff;
+            config.CrossingGradients_alpha1 = 100;
+            config.CrossingGradients_color2 = 0x000000;
+            config.CrossingGradients_alpha2 = 100;
+            config.CrossingGradients_animate = false;
+        });
+        btn('overlappingGradientsAlphaTestZoomed', 'overlapping gradients (alpha-test, zoomed)', //
+        () => {
+            config.mode = 'alphatest';
+            config.scene = 'CrossingGradients';
+            config.sizeLog2 = 4;
+            config.showResolvedColor = false;
+            config.CrossingGradients_gradient = true;
+            config.CrossingGradients_color1 = 0xffffff;
+            config.CrossingGradients_alpha1 = 100;
+            config.CrossingGradients_color2 = 0x000000;
+            config.CrossingGradients_alpha2 = 100;
+            config.CrossingGradients_animate = false;
+        });
+        btn('overlappingGradientsA2CNVIDIAZoomed', 'overlapping gradients (A2C, NVIDIA, zoomed)', //
+        () => {
+            config.mode = 'emulated';
+            config.emulatedDevice = 'NVIDIA GeForce RTX 3070';
+            config.scene = 'CrossingGradients';
+            config.sizeLog2 = 4;
+            config.showResolvedColor = false;
+            config.CrossingGradients_gradient = true;
+            config.CrossingGradients_color1 = 0xffffff;
+            config.CrossingGradients_alpha1 = 100;
+            config.CrossingGradients_color2 = 0x000000;
+            config.CrossingGradients_alpha2 = 100;
+            config.CrossingGradients_animate = false;
+        });
+        btn('overlappingGradientsA2CNVIDIAZoomedResolved', 'overlapping gradients (A2C, NVIDIA, zoomed/resolved)', //
+        () => {
+            config.mode = 'emulated';
+            config.emulatedDevice = 'NVIDIA GeForce RTX 3070';
+            config.scene = 'CrossingGradients';
+            config.sizeLog2 = 4;
+            config.CrossingGradients_gradient = true;
+            config.CrossingGradients_color1 = 0xffffff;
+            config.CrossingGradients_alpha1 = 100;
+            config.CrossingGradients_color2 = 0x000000;
+            config.CrossingGradients_alpha2 = 100;
+            config.CrossingGradients_animate = false;
+        });
+        btn('overlappingGradientsA2CNVIDIA', 'overlapping gradients (A2C, NVIDIA)', //
+        () => {
+            config.mode = 'emulated';
+            config.emulatedDevice = 'NVIDIA GeForce RTX 3070';
+            config.scene = 'CrossingGradients';
+            config.CrossingGradients_gradient = true;
+            config.CrossingGradients_color1 = 0xffffff;
+            config.CrossingGradients_alpha1 = 100;
+            config.CrossingGradients_color2 = 0x000000;
+            config.CrossingGradients_alpha2 = 100;
+            config.CrossingGradients_animate = false;
+        });
+        btn('overlappingGradientsA2CQualcommZoomedResolved', 'overlapping gradients (A2C, Qualcomm, zoomed/resolved)', //
+        () => {
+            config.mode = 'emulated';
+            config.emulatedDevice = 'Qualcomm Adreno 630';
+            config.scene = 'CrossingGradients';
+            config.sizeLog2 = 4;
+            config.CrossingGradients_gradient = true;
+            config.CrossingGradients_color1 = 0xffffff;
+            config.CrossingGradients_alpha1 = 100;
+            config.CrossingGradients_color2 = 0x000000;
+            config.CrossingGradients_alpha2 = 100;
+            config.CrossingGradients_animate = false;
+        });
+        btn('overlappingGradientsA2CQualcomm', 'overlapping gradients (A2C, Qualcomm)', //
+        () => {
+            config.mode = 'emulated';
+            config.emulatedDevice = 'Qualcomm Adreno 630';
+            config.scene = 'CrossingGradients';
+            config.CrossingGradients_gradient = true;
+            config.CrossingGradients_color1 = 0xffffff;
+            config.CrossingGradients_alpha1 = 100;
+            config.CrossingGradients_color2 = 0x000000;
+            config.CrossingGradients_alpha2 = 100;
+            config.CrossingGradients_animate = false;
+        });
+        btn('blurryLeafNVIDIA', 'blurry-leaf closeup (NVIDIA)', //
+        () => {
+            config.mode = 'emulated';
+            config.emulatedDevice = 'NVIDIA GeForce RTX 3070';
+            config.scene = 'Leaf';
+            config.FoliageCommon_featheringWidthPx = 25;
+        });
+        btn('blurryLeafQualcomm', 'blurry-leaf closeup (Qualcomm)', //
+        () => {
+            config.mode = 'emulated';
+            config.emulatedDevice = 'Qualcomm Adreno 630';
+            config.scene = 'Leaf';
+            config.FoliageCommon_featheringWidthPx = 25;
+        });
+        btn('blurryLeafApple', 'blurry-leaf closeup (Apple)', //
+        () => {
+            config.mode = 'emulated';
+            config.emulatedDevice = 'Apple M1 Pro';
+            config.scene = 'Leaf';
+            config.FoliageCommon_featheringWidthPx = 25;
+        });
+        btn('blurryLeafNative', 'blurry-leaf closeup (native)', //
+        () => {
+            config.mode = 'native';
+            config.scene = 'Leaf';
+            config.FoliageCommon_featheringWidthPx = 25;
+        });
+        btn('solidInspectorNVIDIA', 'solid pattern inspector (NVIDIA)', //
+        () => {
+            config.mode = 'emulated';
+            config.emulatedDevice = 'NVIDIA GeForce RTX 3070';
             config.scene = 'CrossingGradients';
             config.sizeLog2 = 3;
-            config.animate = true;
             config.CrossingGradients_gradient = false;
-            updateDisplay();
-        },
-    };
-    gui.add(buttons, 'fullscreen').name('toggle fullscreen');
-    const presets = gui.addFolder('Presets');
-    presets.open();
-    presets.add(buttons, 'foliageDemo').name('foliage demo (default)');
-    presets.add(buttons, 'leaf').name('leaf closeup ');
-    presets
-        .add(buttons, 'overlappingGradientsA2C')
-        .name('overlapping gradients (alpha-to-coverage)');
-    presets
-        .add(buttons, 'overlappingGradientsBlend')
-        .name('overlapping gradients (blending)');
-    presets.add(buttons, 'solidInspector').name('solid pattern inspector');
+            config.CrossingGradients_animate = true;
+        });
+        btn('solidInspectorApple', 'solid pattern inspector (Apple)', //
+        () => {
+            config.mode = 'emulated';
+            config.emulatedDevice = 'Apple M1 Pro';
+            config.scene = 'CrossingGradients';
+            config.sizeLog2 = 3;
+            config.CrossingGradients_gradient = false;
+            config.CrossingGradients_animate = true;
+        });
+        btn('solidInspectorQualcomm', 'solid pattern inspector (Qualcomm)', //
+        () => {
+            config.mode = 'emulated';
+            config.emulatedDevice = 'Qualcomm Adreno 630';
+            config.scene = 'CrossingGradients';
+            config.sizeLog2 = 3;
+            config.CrossingGradients_gradient = false;
+            config.CrossingGradients_animate = true;
+        });
+        btn('solidInspectorNative', 'solid pattern inspector (native)', //
+        () => {
+            config.scene = 'CrossingGradients';
+            config.sizeLog2 = 3;
+            config.CrossingGradients_gradient = false;
+            config.CrossingGradients_animate = true;
+        });
+        btn('foliageBlurry', 'foliage (alpha-to-coverage, blurry)', //
+        () => {
+            config.sizeLog2 = 13;
+            config.FoliageCommon_featheringWidthPx = 15;
+        });
+    }
     const visualizationPanel = gui.addFolder('Visualization');
     visualizationPanel.open();
-    visualizationPanel.add(config, 'sizeLog2', 0, 10, 1).name('size = 2**');
+    visualizationPanel.add(config, 'sampleCount', [4]);
+    visualizationPanel.add(config, 'sizeLog2', 0, 13, 1).name('size = 2**');
     visualizationPanel.add(config, 'showResolvedColor', false);
     const enableDisableDevice = () => {
         emulatedDeviceElem.disabled = !(config.mode === 'emulated' || config.mode2 === 'emulated');
@@ -9022,7 +9193,6 @@ gui.width = 340;
         }
     };
     scenesPanel.add(config, 'scene', kSceneNames).onChange(showHideScenePanels);
-    scenesPanel.add(config, 'animate', false);
     const sceneCrossingGradients = scenesPanel.addFolder('CrossingGradients scene options');
     sceneCrossingGradients.open();
     scenePanels.push(sceneCrossingGradients);
@@ -9042,6 +9212,7 @@ gui.width = 340;
         draw2Panel
             .add(config, 'CrossingGradients_alpha2', 0, 100, 0.001)
             .name('alpha %');
+        draw2Panel.add(config, 'CrossingGradients_animate', false).name('animate');
     }
     const sceneLeaf = scenesPanel.addFolder('Leaf/Foliage scene options');
     sceneLeaf.open();
@@ -9056,15 +9227,14 @@ gui.width = 340;
     scenePanels.push(sceneFoliage);
     {
         sceneFoliage
+            .add(config, 'Foliage_cameraDistanceLog', 0, 9, 0.1)
+            .name('camera dist = 1.5**');
+        sceneFoliage
             .add(config, 'Foliage_cameraRotation', 0, 360, 1)
             .name('camera rotation');
+        sceneFoliage.add(config, 'Foliage_animate', false).name('animate');
     }
     showHideScenePanels();
-    function updateDisplay() {
-        enableDisableDevice();
-        showHideScenePanels();
-        gui.updateDisplay();
-    }
 }
 //
 // Canvas setup
@@ -9088,10 +9258,12 @@ let smallDotMSTexture, smallDotMSTextureView;
 let largeDotMSTexture, largeDotMSTextureView;
 let resolveTexture, resolveTextureView;
 let depthTexture, depthTextureView;
-let lastSizeLog2 = 0;
+let lastSize = 0;
 function reallocateRenderTargets() {
-    if (lastSizeLog2 !== config.sizeLog2) {
-        const size = 1 << config.sizeLog2;
+    // Use the requested resolution, but no larger than the canvas resolution.
+    const size = Math.min(1 << config.sizeLog2, canvas.width);
+    if (lastSize !== size) {
+        lastSize = size;
         if (smallDotMSTexture) {
             smallDotMSTexture.destroy();
         }
@@ -9102,7 +9274,7 @@ function reallocateRenderTargets() {
             format: 'rgba8unorm',
             usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
             size: [size, size],
-            sampleCount: 4,
+            sampleCount: config.sampleCount,
         };
         smallDotMSTexture = device.createTexture(msTextureDesc);
         smallDotMSTextureView = smallDotMSTexture.createView();
@@ -9124,10 +9296,9 @@ function reallocateRenderTargets() {
             format: 'depth24plus',
             usage: GPUTextureUsage.RENDER_ATTACHMENT,
             size: [size, size],
-            sampleCount: 4,
+            sampleCount: config.sampleCount,
         });
         depthTextureView = depthTexture.createView();
-        lastSizeLog2 = config.sizeLog2;
     }
 }
 function applyConfig() {
@@ -9257,10 +9428,8 @@ function render() {
     device.queue.submit([commandEncoder.finish()]);
 }
 function frame() {
-    if (config.animate) {
-        scenes[config.scene].modifyConfigForAnimation(config);
-        gui.updateDisplay();
-    }
+    scenes[config.scene].modifyConfigForAnimation(config);
+    gui.updateDisplay();
     updateCanvasSize();
     render();
     requestAnimationFrame(frame);
