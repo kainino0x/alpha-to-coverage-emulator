@@ -37,7 +37,10 @@ export abstract class FoliageCommon extends Scene {
     this.device.queue.writeBuffer(
       this.uniformBuffer,
       0,
-      getViewProjMatrix((config.Foliage_cameraRotation / 180) * Math.PI)
+      getViewProjMatrix(
+        config.Foliage_cameraDistanceLog,
+        (config.Foliage_cameraRotation / 180) * Math.PI
+      )
     );
     this.device.queue.writeBuffer(
       this.uniformBuffer,
@@ -51,7 +54,10 @@ export abstract class FoliageCommon extends Scene {
   }
 }
 
-function getViewProjMatrix(cameraRotationRad: number) {
+function getViewProjMatrix(
+  cameraDistanceLog: number,
+  cameraRotationRad: number
+) {
   const aspect = 1;
 
   const projectionMatrix = mat4.perspective(
@@ -61,9 +67,10 @@ function getViewProjMatrix(cameraRotationRad: number) {
     2000.0
   );
 
+  const dist = 1.5 ** cameraDistanceLog;
   const upVector = vec3.fromValues(0, 1, 0);
   const look = vec3.fromValues(0, 0.5, 0);
-  const eyePosition = vec3.fromValues(0, 3, 8);
+  const eyePosition = vec3.fromValues(0, 3 * dist, 8 * dist);
 
   const rotation = mat4.rotateY(mat4.translation(look), cameraRotationRad);
   vec3.transformMat4(eyePosition, rotation, eyePosition);

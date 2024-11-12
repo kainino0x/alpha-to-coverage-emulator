@@ -5,6 +5,8 @@ import { FoliageCommon } from './FoliageCommon';
 
 export class Foliage extends FoliageCommon {
   modifyConfigForAnimation(config: Config) {
+    if (!config.Foliage_animate) return;
+
     config.Foliage_cameraRotation = ((performance.now() / 60_000) % 1) * 360;
   }
 

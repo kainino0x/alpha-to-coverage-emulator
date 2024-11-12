@@ -15,6 +15,8 @@ export class CrossingGradients extends Scene {
   }
 
   modifyConfigForAnimation(config: Config) {
+    if (!config.CrossingGradients_animate) return;
+
     // scrub alpha2 over 15 seconds
     const alpha = ((performance.now() / 15000) % 1) * (100 + 10) - 5;
     config.CrossingGradients_alpha2 = Math.max(0, Math.min(alpha, 100));
