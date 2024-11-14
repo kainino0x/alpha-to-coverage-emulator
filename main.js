@@ -8878,6 +8878,7 @@ class Foliage extends FoliageCommon {
     }
 }
 
+// TODO add some notes to the article about how "moving" samples around improves the result. E.g. by showing Apple which is 2x2 and doesn't, then AMD or Qualcomm which do.
 // TODO add a way to verify emulator-generator locally (maybe add an placeholder device to the list, and embed a button that runs the generator in a popup dialog and then writes the result into kEmulatedAlphaToCoverage) - and instructions to submit new results, maybe a prefilled github issue link
 const canvas = document.querySelector('canvas');
 const device = await (async () => {
