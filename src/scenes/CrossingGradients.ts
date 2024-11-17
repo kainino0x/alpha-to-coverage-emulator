@@ -21,7 +21,16 @@ export class CrossingGradients extends Scene {
 
     // scrub alpha2 over 15 seconds
     if (this.alphaForAnimation >= 0 && this.alphaForAnimation <= 100) {
-      this.alphaForAnimation = config.CrossingGradients_alpha2right;
+      // very convoluted logic to make it so that you can manually edit either
+      // of the alpha values while it's animating AND also have the animation
+      // pause at the beginning and end
+      if (this.alphaForAnimation !== config.CrossingGradients_alpha2right) {
+        this.alphaForAnimation = config.CrossingGradients_alpha2right;
+      } else if (
+        this.alphaForAnimation !== config.CrossingGradients_alpha2left
+      ) {
+        this.alphaForAnimation = config.CrossingGradients_alpha2left;
+      }
     }
     this.alphaForAnimation += (getFrameTimeStep() / 15000) * 110;
     this.alphaForAnimation = ((this.alphaForAnimation + 5) % 110) - 5;
