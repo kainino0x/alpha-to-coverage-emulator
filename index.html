@@ -16,24 +16,27 @@
         margin: 0; /* remove default margin */
         height: 100%; /* make body fill the browser window */
       }
+      body {
+        overflow-x: hidden;
+        overflow-y: scroll;
+      }
 
       #left,
       #right {
         position: fixed;
-        height: 100vh;
         top: 0;
       }
       #left {
         left: 0;
         width: 70vw;
+        height: 100vh;
       }
       #right {
+        position: absolute;
         right: 0;
         width: 30vw;
         min-width: 200px;
         padding: 0.5em 0.5em 90vh 0.5em;
-        overflow-x: hidden;
-        overflow-y: scroll;
         overflow-wrap: anywhere;
         background: rgb(0 0 0 / 50%);
       }
@@ -56,6 +59,15 @@
       :target {
         color: green;
         text-decoration-style: wavy;
+      }
+
+      .more {
+        display: inline-block;
+        font-size: 24pt;
+        transform: scaleY(50%);
+        transform-origin: 0 12pt;
+        letter-spacing: 1pt;
+        line-height: 12px;
       }
     </style>
     <script defer type="module" src="./main.js"></script>
@@ -173,8 +185,8 @@
       <h2><a id="overlappingGradientsA2CNVIDIAZoomed">loading...</a></h2>
       <p>
         ... which is exactly what alpha-to-coverage will do for us! Here, we see
-        our first real alpha-to-coverage algorithm, the one used by one NVIDIA
-        GPU.
+        our first real alpha-to-coverage algorithm, the one used by some NVIDIA
+        GPUs.
       </p>
       <p>
         (Note the samples are arranged somewhat arbitrarily; that's OK, because
@@ -186,7 +198,7 @@
       </h2>
       <p>
         When we average out the samples, we get results that look like this.
-        That's not a bad gradient!
+        That's sort of a gradient!
       </p>
 
       <h2><a id="overlappingGradientsA2CNVIDIA">loading...</a></h2>
@@ -199,21 +211,65 @@
         areas, providing average "bit depths" of 16 or 64, respectively.
       </p>
 
-      <h2>
-        <a id="overlappingGradientsA2CQualcommZoomedResolved">loading...</a>
-      </h2>
+      <h2><a id="overlappingGradientsA2CApple">loading...</a></h2>
       <p>
-        Let's zoom back in and look at a different GPU architecture. This is the
-        4&times;4 dithered alpha-to-coverage pattern used by one Qualcomm Adreno
-        GPU.
+        Let's look at a different GPU architecture. This is the 2&times;2
+        dithered alpha-to-coverage pattern used by some Apple GPUs. Much better!
+        But notice that the gradient is cut off at the diagonal &mdash; in the
+        "ideal" version, this wasn't the case.
+      </p>
+
+      <h2><a id="solidInspectorApple">loading...</a></h2>
+      <p>
+        A different visualization can help us understand why this happens. Here,
+        we are looking at a single solid blue quad at varying alpha values. This
+        lets us see how the architecture translates alpha values into exact
+        bitmask patterns.
+      </p>
+      <p>
+        Note in particular how, on this architecture, once a sample "pops in",
+        it never "pops out". This means that for two alpha values
+        <code>a1</code> and <code>a2</code>, if <code>a2 &gt; a1</code>,
+        <code>a2</code> will <em>always fully cover up</em> <code>a2</code>.
+        This is not what would be expected with blending!
+      </p>
+
+      <h2><a id="solidInspectorAMD">loading...</a></h2>
+      <p>
+        Some architectures get a bit fancier to produce somewhat more
+        blending-like results. Here is the algorithm used by some AMD GPUs. Note
+        how it divides alpha into more than 17 steps (29 to be exact), even
+        though it only uses the 16 sample bits over a 2&times;2 area. Instead,
+        it "moves" coverage bits around, seemingly arbitrarily, at steps where
+        it doesn't change the overall coverage percentage.
+      </p>
+
+      <h2><a id="overlappingGradientsA2CAMD">loading...</a></h2>
+      <p>
+        But this fixes the problem we observed previously! Now, some of those
+        more-transparent <code>a1</code> samples show through under
+        less-transparent <code>a2</code> samples.
+      </p>
+      <p>
+        Effectively, this technique somewhat randomizes the mixing of nearby
+        colors, using slight differences in alpha (that would be barely
+        perceptible) as a source of "randomness". It's not perfect, and it has
+        some odd artifacts, but it does put us much closer to the blended
+        result.
+      </p>
+
+      <h2><a id="solidInspectorQualcomm">loading...</a></h2>
+      <p>
+        What could we do with <em class="more">more</em>? Here's the pattern
+        used by some Qualcomm GPUs. It's 4&times;4 (so 64 samples), yet has
+        (just) 18 steps.
       </p>
 
       <h2><a id="overlappingGradientsA2CQualcomm">loading...</a></h2>
       <p>
-        Zoomed back out, that looks pretty nice! There are some odd artifacts,
-        but these disappear easily in a real scene. (Actually, as beautiful as
-        this is, even the differences between NVIDIA and Qualcomm disappear
-        quite easily in scenes I've tried.)
+        And here's how it renders! Pretty cool! <em>Still</em> some artifacts,
+        but they easily disappear in a real scene. (The "blurry foliage" preset
+        below will show how this actually works nicely in practice!)
       </p>
 
       <h2><a id="blurryLeafNVIDIA">loading...</a></h2>
@@ -223,7 +279,10 @@
       </p>
 
       <h2><a id="blurryLeafApple">loading...</a></h2>
-      <p>... here on Apple, which uses a 2&times;2 dithering pattern...</p>
+      <p>
+        ... here on Apple, with 2&times;2 dithering (AMD looks about the same
+        because there is only one draw call here)...
+      </p>
 
       <h2><a id="blurryLeafQualcomm">loading...</a></h2>
       <p>... here on Qualcomm, with 4&times;4 dithering...</p>
@@ -236,29 +295,24 @@
 
       <hr />
 
-      <p>
-        Finally, the following samples show an animated visualization of the
-        alpha-to-coverage patterns used on these GPUs &mdash; the scene shows a
-        single solid-color quad, animating alpha from 0% to 100%.
-      </p>
-
-      <h2><a id="solidInspectorNVIDIA">loading...</a></h2>
-
-      <h2><a id="solidInspectorApple">loading...</a></h2>
-
-      <h2><a id="solidInspectorQualcomm">loading...</a></h2>
-      <p>Wild!</p>
-
-      <h2><a id="solidInspectorNative">loading...</a></h2>
-
-      <hr />
-
       <h2><a id="foliageBlurry">loading...</a></h2>
+      <p>Finally, a slight variation on the initial demo.</p>
       <p>
         By default, the foliage demo uses a 1px feathered edge to produce an
         antialiased but sharp edge. But at full resolution, the foliage demo
-        also looks neat with blurry-edged leaves, shown here. Try out various
-        emulation modes &mdash; they make a subtle difference!
+        also looks neat with blurry-edged leaves, shown here.
+      </p>
+      <p>
+        <strong>
+          Try out various emulated devices &mdash; they make a subtle
+          difference!
+        </strong>
+        Note in particular how both AMD and Qualcomm (especially Qualcomm) are
+        brighter toward the center of the plant where there are a lot more
+        overlapping leaves. This is because their algorithms do a better job
+        preserving coverage of one leaf before drawing the next one. (I believe
+        this technically comes at the cost of some depth-testing accuracy due to
+        the randomization, but it's not really noticeable.)
       </p>
 
       <hr />
@@ -281,17 +335,32 @@
         </li>
         <li>
           Emulation is very simple: instead of enabling alpha-to-coverage, we
-          disable it and output the <code>sample_mask</code> builtin instead.
-          The sample mask is generated by a function which carefully emulates
-          the behavior of some tested hardware. Figuring out this function is
-          the hard part &mdash; I also wrote the
-          <a href="emulator-generator/">Alpha-to-Coverage Emulator Generator</a>
-          which captures the behavior and then attempts to detect the block size
-          and the exact thresholds between steps. (Someday I'd like to integrate
-          that into this sample so you can capture and test emulation on a
-          device easily.)
+          disable it and output the <code>sample_mask</code> builtin instead,
+          with alpha set to 1. The sample mask is generated by a function which
+          carefully emulates the behavior of some tested hardware. Figuring out
+          this function is the hard part...
         </li>
       </ul>
+
+      <h2><a id="generator">loading...</a></h2>
+      <p>
+        This tool captures the alpha-to-coverage behavior on the current device
+        and then attempts to generate code to emulate it, by detecting the block
+        size and the exact thresholds beween steps. Click on the "<strong
+          >Generate an emulator for this device</strong
+        >" button to run the generator.
+      </p>
+      <p>
+        This preset will show the generated emulator in the visualization, and
+        <em>also</em> show your native device as a small dot inside the big one
+        as a comparison. If you can still see the small dot after clicking the
+        button, that means the generated emulator did <em>not</em> successfully
+        capture your device's behavior.
+        <strong>
+          If that happens, or your device has a different pattern than any of
+          the ones I have provided, please submit your result!
+        </strong>
+      </p>
     </div>
   </body>
 </html>

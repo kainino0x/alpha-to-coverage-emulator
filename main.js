@@ -2646,12 +2646,29 @@ const fail = (() => {
     };
 })();
 
+const kNullEmulator = 'fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 { return 0; }';
 /**
  * For each device name, provides the source for a WGSL function which emulates
  * the alpha-to-coverage algorithm of that device by mapping (alpha, x, y) to
  * a sample mask.
  */
 const kEmulatedAlphaToCoverage = {
+    'NVIDIA GeForce RTX 3070': `\
+    fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
+      if alpha <  253.0 / 2048.0 { return 0x0; }
+      if alpha <  767.0 / 2048.0 { return 0x8; }
+      if alpha < 1281.5 / 2048.0 { return 0x9; }
+      if alpha < 1795.5 / 2048.0 { return 0xb; }
+      return 0xf;
+    }`,
+    'Intel HD Graphics 4400': `\
+    fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
+      if alpha <= 0.5 / 4.0 { return 0x0; }
+      if alpha <= 1.5 / 4.0 { return 0x1; }
+      if alpha <= 2.5 / 4.0 { return 0x3; }
+      if alpha <= 3.5 / 4.0 { return 0x7; }
+      return 0xf;
+    }`,
     'Apple M1 Pro': `\
     fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
       let i = (xy.y % 2) * 2 + (xy.x % 2);
@@ -2673,22 +2690,6 @@ const kEmulatedAlphaToCoverage = {
       if alpha < 247.5 / 255.0 { return array(0xf, 0xf, 0xb, 0xfu)[i]; }
       return 0xf;
     }`,
-    'NVIDIA GeForce RTX 3070': `\
-    fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
-      if alpha <  253.0 / 2048.0 { return 0x0; }
-      if alpha <  767.0 / 2048.0 { return 0x8; }
-      if alpha < 1281.5 / 2048.0 { return 0x9; }
-      if alpha < 1795.5 / 2048.0 { return 0xb; }
-      return 0xf;
-    }`,
-    'Intel HD Graphics 4400': `\
-    fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
-      if alpha <= 0.5 / 4.0 { return 0x0; }
-      if alpha <= 1.5 / 4.0 { return 0x1; }
-      if alpha <= 2.5 / 4.0 { return 0x3; }
-      if alpha <= 3.5 / 4.0 { return 0x7; }
-      return 0xf;
-    }`,
     'ARM Mali-G78': `\
     fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
       let i = (xy.y % 2) * 2 + (xy.x % 2);
@@ -2708,28 +2709,6 @@ const kEmulatedAlphaToCoverage = {
       if alpha < 13.5 / 16.0 { return array(0x7, 0xf, 0xe, 0x7u)[i]; }
       if alpha < 14.5 / 16.0 { return array(0xf, 0xf, 0xe, 0x7u)[i]; }
       if alpha < 15.5 / 16.0 { return array(0xf, 0xf, 0xe, 0xfu)[i]; }
-      return 0xf;
-    }`,
-    'Qualcomm Adreno 630': `\
-    fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
-      let i = (xy.y % 4) * 4 + (xy.x % 4);
-      if alpha <   0.5 / 255.0 { return array(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0u)[i]; }
-      if alpha <  15.5 / 255.0 { return array(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0u)[i]; }
-      if alpha <  31.5 / 255.0 { return array(0x1, 0x0, 0x8, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x1, 0x0, 0x0u)[i]; }
-      if alpha <  47.5 / 255.0 { return array(0x2, 0x0, 0x1, 0x0, 0x0, 0x2, 0x0, 0x1, 0x4, 0x1, 0x8, 0x0, 0x0, 0x4, 0x0, 0x8u)[i]; }
-      if alpha <  63.5 / 255.0 { return array(0x0, 0x2, 0x8, 0x1, 0x1, 0x4, 0x2, 0x8, 0x4, 0x2, 0x0, 0x2, 0x2, 0x0, 0x1, 0x4u)[i]; }
-      if alpha <  79.5 / 255.0 { return array(0x4, 0x1, 0x2, 0x8, 0x8, 0x2, 0x1, 0x4, 0x2, 0x8, 0x4, 0x1, 0x1, 0x4, 0x8, 0x3u)[i]; }
-      if alpha <  95.5 / 255.0 { return array(0x4, 0x9, 0x2, 0x5, 0x1, 0x4, 0x9, 0x2, 0x6, 0x1, 0x6, 0x8, 0x8, 0x2, 0x1, 0x4u)[i]; }
-      if alpha < 111.5 / 255.0 { return array(0x2, 0x9, 0x4, 0x6, 0x9, 0x6, 0xa, 0x1, 0x6, 0x8, 0x4, 0x9, 0x9, 0x4, 0x9, 0x6u)[i]; }
-      if alpha < 127.5 / 255.0 { return array(0x1, 0x6, 0x9, 0x6, 0x6, 0x9, 0x6, 0x9, 0x9, 0x6, 0x1, 0x6, 0x6, 0x9, 0x6, 0x9u)[i]; }
-      if alpha < 143.5 / 255.0 { return array(0x6, 0x9, 0x6, 0x9, 0xd, 0x6, 0x9, 0x9, 0x6, 0x9, 0x6, 0xd, 0x9, 0x6, 0x9, 0x6u)[i]; }
-      if alpha < 159.5 / 255.0 { return array(0x7, 0x9, 0xe, 0x9, 0x9, 0x7, 0x9, 0x6, 0xe, 0x9, 0x7, 0x9, 0x9, 0x6, 0x9, 0x6u)[i]; }
-      if alpha < 175.5 / 255.0 { return array(0xe, 0x9, 0xe, 0x5, 0x7, 0xe, 0xd, 0xb, 0x6, 0x7, 0x9, 0xd, 0x9, 0xe, 0x7, 0xeu)[i]; }
-      if alpha < 191.5 / 255.0 { return array(0xb, 0x6, 0xd, 0x7, 0xe, 0xd, 0x7, 0xb, 0xd, 0x7, 0xb, 0xe, 0x7, 0xb, 0xe, 0xdu)[i]; }
-      if alpha < 207.5 / 255.0 { return array(0x7, 0xe, 0xf, 0xd, 0xb, 0x7, 0xd, 0xe, 0xe, 0xd, 0x7, 0xf, 0xf, 0xb, 0xe, 0x7u)[i]; }
-      if alpha < 223.5 / 255.0 { return array(0xd, 0xf, 0xf, 0xb, 0xf, 0x7, 0xe, 0xf, 0xf, 0xb, 0xf, 0xe, 0xe, 0xd, 0x7, 0xfu)[i]; }
-      if alpha < 239.5 / 255.0 { return array(0xf, 0xf, 0xf, 0xe, 0xf, 0xe, 0xf, 0xf, 0x7, 0xf, 0xf, 0xf, 0xf, 0xf, 0xd, 0xfu)[i]; }
-      if alpha < 254.5 / 255.0 { return array(0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xb, 0xf, 0xf, 0xf, 0xf, 0xfu)[i]; }
       return 0xf;
     }`,
     'AMD Radeon RX 580': `\
@@ -2768,6 +2747,29 @@ const kEmulatedAlphaToCoverage = {
       if alpha < 31 / 32.0 { return array(0xf, 0xf, 0x7, 0xfu)[i]; }
       return 0xf;
     }`,
+    'Qualcomm Adreno 630': `\
+    fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
+      let i = (xy.y % 4) * 4 + (xy.x % 4);
+      if alpha <   0.5 / 255.0 { return array(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0u)[i]; }
+      if alpha <  15.5 / 255.0 { return array(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0u)[i]; }
+      if alpha <  31.5 / 255.0 { return array(0x1, 0x0, 0x8, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x1, 0x0, 0x0u)[i]; }
+      if alpha <  47.5 / 255.0 { return array(0x2, 0x0, 0x1, 0x0, 0x0, 0x2, 0x0, 0x1, 0x4, 0x1, 0x8, 0x0, 0x0, 0x4, 0x0, 0x8u)[i]; }
+      if alpha <  63.5 / 255.0 { return array(0x0, 0x2, 0x8, 0x1, 0x1, 0x4, 0x2, 0x8, 0x4, 0x2, 0x0, 0x2, 0x2, 0x0, 0x1, 0x4u)[i]; }
+      if alpha <  79.5 / 255.0 { return array(0x4, 0x1, 0x2, 0x8, 0x8, 0x2, 0x1, 0x4, 0x2, 0x8, 0x4, 0x1, 0x1, 0x4, 0x8, 0x3u)[i]; }
+      if alpha <  95.5 / 255.0 { return array(0x4, 0x9, 0x2, 0x5, 0x1, 0x4, 0x9, 0x2, 0x6, 0x1, 0x6, 0x8, 0x8, 0x2, 0x1, 0x4u)[i]; }
+      if alpha < 111.5 / 255.0 { return array(0x2, 0x9, 0x4, 0x6, 0x9, 0x6, 0xa, 0x1, 0x6, 0x8, 0x4, 0x9, 0x9, 0x4, 0x9, 0x6u)[i]; }
+      if alpha < 127.5 / 255.0 { return array(0x1, 0x6, 0x9, 0x6, 0x6, 0x9, 0x6, 0x9, 0x9, 0x6, 0x1, 0x6, 0x6, 0x9, 0x6, 0x9u)[i]; }
+      if alpha < 143.5 / 255.0 { return array(0x6, 0x9, 0x6, 0x9, 0xd, 0x6, 0x9, 0x9, 0x6, 0x9, 0x6, 0xd, 0x9, 0x6, 0x9, 0x6u)[i]; }
+      if alpha < 159.5 / 255.0 { return array(0x7, 0x9, 0xe, 0x9, 0x9, 0x7, 0x9, 0x6, 0xe, 0x9, 0x7, 0x9, 0x9, 0x6, 0x9, 0x6u)[i]; }
+      if alpha < 175.5 / 255.0 { return array(0xe, 0x9, 0xe, 0x5, 0x7, 0xe, 0xd, 0xb, 0x6, 0x7, 0x9, 0xd, 0x9, 0xe, 0x7, 0xeu)[i]; }
+      if alpha < 191.5 / 255.0 { return array(0xb, 0x6, 0xd, 0x7, 0xe, 0xd, 0x7, 0xb, 0xd, 0x7, 0xb, 0xe, 0x7, 0xb, 0xe, 0xdu)[i]; }
+      if alpha < 207.5 / 255.0 { return array(0x7, 0xe, 0xf, 0xd, 0xb, 0x7, 0xd, 0xe, 0xe, 0xd, 0x7, 0xf, 0xf, 0xb, 0xe, 0x7u)[i]; }
+      if alpha < 223.5 / 255.0 { return array(0xd, 0xf, 0xf, 0xb, 0xf, 0x7, 0xe, 0xf, 0xf, 0xb, 0xf, 0xe, 0xe, 0xd, 0x7, 0xfu)[i]; }
+      if alpha < 239.5 / 255.0 { return array(0xf, 0xf, 0xf, 0xe, 0xf, 0xe, 0xf, 0xf, 0x7, 0xf, 0xf, 0xf, 0xf, 0xf, 0xd, 0xfu)[i]; }
+      if alpha < 254.5 / 255.0 { return array(0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xb, 0xf, 0xf, 0xf, 0xf, 0xfu)[i]; }
+      return 0xf;
+    }`,
+    '(generated from your device)': kNullEmulator,
 };
 const kEmulatedAlphaTest = `\
   fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
@@ -2813,7 +2815,7 @@ class Scene {
         this.device = device;
     }
     getPipeline(opts, keyOpts) {
-        const key = JSON.stringify(keyOpts);
+        const key = keyOpts.mode + '|' + kEmulatedAlphaToCoverage[keyOpts.emulatedDevice];
         let value = this.pipelineCache.get(key);
         if (value === undefined) {
             let code = opts.code;
@@ -2885,8 +2887,17 @@ class Scene {
     }
 }
 
+let frameTimeStep = 0;
+function setFrameTimeStep(t) {
+    frameTimeStep = t;
+}
+function getFrameTimeStep() {
+    return frameTimeStep;
+}
+
 class CrossingGradients extends Scene {
     bufVertexColors;
+    alphaForAnimation = -5;
     constructor(device) {
         super(device);
         this.bufVertexColors = device.createBuffer({
@@ -2898,8 +2909,14 @@ class CrossingGradients extends Scene {
         if (!config.CrossingGradients_animate)
             return;
         // scrub alpha2 over 15 seconds
-        const alpha = ((performance.now() / 15000) % 1) * (100 + 10) - 5;
-        config.CrossingGradients_alpha2 = Math.max(0, Math.min(alpha, 100));
+        if (this.alphaForAnimation >= 0 && this.alphaForAnimation <= 100) {
+            this.alphaForAnimation = config.CrossingGradients_alpha2right;
+        }
+        this.alphaForAnimation += (getFrameTimeStep() / 15000) * 110;
+        this.alphaForAnimation = ((this.alphaForAnimation + 5) % 110) - 5;
+        const alpha = Math.max(0, Math.min(this.alphaForAnimation, 100));
+        config.CrossingGradients_alpha2left = alpha;
+        config.CrossingGradients_alpha2right = alpha;
     }
     applyConfig(config) {
         const c1 = [
@@ -2912,10 +2929,10 @@ class CrossingGradients extends Scene {
             ((config.CrossingGradients_color2 >> 8) & 0xff) / 255, // G
             ((config.CrossingGradients_color2 >> 0) & 0xff) / 255, // B
         ];
-        const a1b = config.CrossingGradients_alpha1 / 100;
-        const a2b = config.CrossingGradients_alpha2 / 100;
-        const a1a = config.CrossingGradients_gradient ? 0 : a1b;
-        const a2a = config.CrossingGradients_gradient ? 0 : a2b;
+        const a1a = config.CrossingGradients_alpha1top / 100;
+        const a1b = config.CrossingGradients_alpha1bottom / 100;
+        const a2a = config.CrossingGradients_alpha2left / 100;
+        const a2b = config.CrossingGradients_alpha2right / 100;
         const dataVertexColors = 
         /* prettier-ignore */ new Float32Array([
             ...c1, a1b, ...c1, a1a, ...c1, a1b, ...c1, a1b, ...c1, a1a, ...c1, a1a,
@@ -8862,7 +8879,9 @@ class Foliage extends FoliageCommon {
     modifyConfigForAnimation(config) {
         if (!config.Foliage_animate)
             return;
-        config.Foliage_cameraRotation = ((performance.now() / 60_000) % 1) * 360;
+        config.Foliage_cameraRotation =
+            (config.Foliage_cameraRotation + (getFrameTimeStep() / 60_000) * 360) %
+                360;
     }
     render(pass, mode, emulatedDevice) {
         const pipeline = this.getPipeline({
@@ -8878,23 +8897,302 @@ class Foliage extends FoliageCommon {
     }
 }
 
-// TODO add some notes to the article about how "moving" samples around improves the result. E.g. by showing Apple which is 2x2 and doesn't, then AMD or Qualcomm which do.
-// TODO add a way to verify emulator-generator locally (maybe add an placeholder device to the list, and embed a button that runs the generator in a popup dialog and then writes the result into kEmulatedAlphaToCoverage) - and instructions to submit new results, maybe a prefilled github issue link
-const canvas = document.querySelector('canvas');
-const device = await (async () => {
-    const adapter = await navigator.gpu?.requestAdapter();
-    const device = await adapter?.requestDevice();
-    quitIfWebGPUNotAvailable(adapter, device);
-    return device;
-})();
-//
-// Scene initialization
-//
-const scenes = {
-    CrossingGradients: new CrossingGradients(device),
-    Leaf: new Leaf(device),
-    Foliage: new Foliage(device),
-};
+var instancedWhiteGradientWGSL = `// Vertex
+
+// Number of steps such that:
+// instance_index=0 -> alpha=0
+// instance_index=kAlphaIncrements -> alpha=1
+override kAlphaIncrements: f32;
+
+@vertex
+fn vmain(
+  @builtin(vertex_index) vertex_index: u32,
+  // The instance index tells us which alpha value to use.
+  @builtin(instance_index) instance_index: u32,
+) -> Varying {
+  var square = array(
+    vec2f(-1, -1), vec2f(-1,  1), vec2f( 1, -1),
+    vec2f( 1, -1), vec2f(-1,  1), vec2f( 1,  1),
+  );
+
+  let alpha = f32(instance_index) / kAlphaIncrements;
+  return Varying(vec4(square[vertex_index % 6], 0, 1), alpha);
+}
+
+// Varying
+
+struct Varying {
+  @builtin(position) pos: vec4f,
+  // alpha from instance-step-mode vertex buffer
+  @location(0) alpha: f32,
+}
+
+// Fragment (called by Scene.ts)
+
+@fragment
+fn fmain(vary: Varying) -> @location(0) vec4f {
+  return vec4f(1, 1, 1, vary.alpha);
+}
+`;
+
+var copyMaskToBufferWGSL = `@group(0) @binding(0) var tex: texture_multisampled_2d<f32>;
+@group(0) @binding(1) var<storage, read_write> out: array<u32>;
+
+override kSize: u32;
+override kSampleCount: u32;
+
+@compute @workgroup_size(8, 8)
+fn main(@builtin(global_invocation_id) xyz: vec3u) {
+    let xy = xyz.xy;
+
+    // Reconstruct the mask from which samples were written
+    var mask = 0u;
+    for (var sampleIndex = 0u; sampleIndex < kSampleCount; sampleIndex += 1) {
+        let color = textureLoad(tex, xy, sampleIndex);
+        let maskBit = u32(color.r > 0.5); // color is either black or white
+        mask |= maskBit << sampleIndex;
+    }
+
+    out[xy.y * kSize + xy.x] = mask;
+}
+`;
+
+const dialogBox = document.createElement('dialog');
+dialogBox.close();
+document.body.append(dialogBox);
+const dialogText = document.createElement('pre');
+dialogText.style.whiteSpace = 'pre-wrap';
+dialogBox.append(dialogText);
+const closeBtn = document.createElement('button');
+closeBtn.textContent = 'OK';
+closeBtn.onclick = () => dialogBox.close();
+dialogBox.append(closeBtn);
+async function generateAlphaToCoverage(adapter, device) {
+    dialogBox.showModal();
+    if (kEmulatedAlphaToCoverage['(generated from your device)'] !== kNullEmulator) {
+        return;
+    }
+    const info = adapter.info;
+    // Render target size. It's the maximum pattern size we can detect.
+    const kSize = 16;
+    const kSampleCount = 4;
+    const kAlphaIncrements = 25_000;
+    const renderTarget = device
+        .createTexture({
+        label: 'renderTarget',
+        format: 'rgba8unorm',
+        usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+        size: [kSize, kSize],
+        sampleCount: kSampleCount,
+    })
+        .createView();
+    const kBufferSize = kSize * kSize * Uint32Array.BYTES_PER_ELEMENT;
+    const copyBuffer = device.createBuffer({
+        label: 'copyBuffer',
+        usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.STORAGE,
+        size: kBufferSize,
+    });
+    const readbackBuffer = device.createBuffer({
+        label: 'readbackBuffer',
+        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+        size: kBufferSize * (kAlphaIncrements + 1),
+    });
+    const quadModule = device.createShaderModule({
+        code: instancedWhiteGradientWGSL,
+    });
+    const quadPipeline = device.createRenderPipeline({
+        label: 'quadPipeline',
+        layout: 'auto',
+        vertex: {
+            module: quadModule,
+            constants: { kAlphaIncrements },
+        },
+        fragment: { module: quadModule, targets: [{ format: 'rgba8unorm' }] },
+        multisample: { count: kSampleCount, alphaToCoverageEnabled: true },
+        primitive: { topology: 'triangle-list' },
+    });
+    const copyModule = device.createShaderModule({ code: copyMaskToBufferWGSL });
+    const copyPipeline = device.createComputePipeline({
+        label: 'copyPipeline',
+        compute: {
+            module: copyModule,
+            constants: { kSize, kSampleCount },
+        },
+        layout: 'auto',
+    });
+    const copyBindGroup = device.createBindGroup({
+        label: 'copyBindGroup',
+        layout: copyPipeline.getBindGroupLayout(0),
+        entries: [
+            { binding: 0, resource: renderTarget },
+            { binding: 1, resource: { buffer: copyBuffer } },
+        ],
+    });
+    dialogText.textContent = '// initialized';
+    for (let alphaStep = 0; alphaStep <= kAlphaIncrements; ++alphaStep) {
+        const enc = device.createCommandEncoder();
+        // Render a white quad with that alpha value, using alpha-to-coverage
+        {
+            const pass = enc.beginRenderPass({
+                colorAttachments: [
+                    {
+                        view: renderTarget,
+                        loadOp: 'clear',
+                        clearValue: [0, 0, 0, 0],
+                        storeOp: 'store',
+                    },
+                ],
+            });
+            pass.setPipeline(quadPipeline);
+            pass.draw(6, 1, 0, alphaStep);
+            pass.end();
+        }
+        // Copy the multisampled result into a buffer
+        {
+            const pass = enc.beginComputePass();
+            pass.setPipeline(copyPipeline);
+            pass.setBindGroup(0, copyBindGroup);
+            pass.dispatchWorkgroups(kSize / 8, kSize / 8);
+            pass.end();
+        }
+        // Copy the buffer to a mappable readback buffer
+        enc.copyBufferToBuffer(copyBuffer, 0, readbackBuffer, alphaStep * kBufferSize, kBufferSize);
+        device.queue.submit([enc.finish()]);
+        if (alphaStep % 1000 === 0) {
+            const alpha = alphaStep / kAlphaIncrements;
+            dialogText.textContent = `// progress: alpha = ${(alpha * 100).toFixed(0)}%`;
+            await device.queue.onSubmittedWorkDone();
+        }
+    }
+    // Read back the buffer and extract the results
+    const results = [];
+    let lastSeenPatternString = '';
+    {
+        await readbackBuffer.mapAsync(GPUMapMode.READ);
+        const readback = readbackBuffer.getMappedRange();
+        for (let alphaStep = 0; alphaStep <= kAlphaIncrements; ++alphaStep) {
+            const data = new Uint32Array(readback, alphaStep * kBufferSize, kSize * kSize);
+            const patternString = data.toString();
+            if (patternString !== lastSeenPatternString) {
+                const alpha = alphaStep / kAlphaIncrements;
+                results.push({ startAlpha: alpha, pattern: Array.from(data) });
+                lastSeenPatternString = patternString;
+            }
+        }
+        readbackBuffer.unmap();
+    }
+    // Try to determine a denominator for the alpha values we saw.
+    let halfDenominator = kAlphaIncrements; // use this if we can't find better
+    let tieBreakDownward = false;
+    const kAllowedError = 1 / kAlphaIncrements;
+    {
+        const kCandidateDenominators = Array.from(
+        // Powers of 2, and powers of 2 minus one
+        (function* () {
+            for (let d = 4; d <= 4096; d *= 2) {
+                yield d - 1;
+                yield d;
+            }
+        })());
+        // Whether
+        let tieBreakDownwardSoFar;
+        dLoop: for (const d of kCandidateDenominators) {
+            // Check if this denominator works for all results
+            for (let i = 0; i < results.length; ++i) {
+                const { startAlpha } = results[i];
+                const numerator = Math.floor(startAlpha * d * 2) / 2;
+                const delta = startAlpha - numerator / d;
+                // Extra tolerance accepts thresholds that tie break up or down.
+                if (delta > kAllowedError * 1.0001) {
+                    continue dLoop;
+                }
+                // This is a good candidate, now check if it tie-breaks consistently.
+                // If it fails without the extra threshold, that means the device might be
+                // tie-breaking upward (so we found the threshold one step too late).
+                // (skip i=0 because that's not a real threshold)
+                if (i > 0) {
+                    const tieBreakDownwardAtValue = delta > kAllowedError * 0.999;
+                    if (tieBreakDownwardSoFar === undefined) {
+                        tieBreakDownwardSoFar = tieBreakDownwardAtValue;
+                    }
+                    else {
+                        if (tieBreakDownwardAtValue !== tieBreakDownwardSoFar) {
+                            continue dLoop;
+                        }
+                    }
+                }
+            }
+            // If we haven't continue'd, we found a good value!
+            halfDenominator = d;
+            tieBreakDownward = tieBreakDownwardSoFar;
+            break;
+        }
+    }
+    // Try determine a smaller pattern size than the one we captured.
+    let patternSize = kSize; // use this if we can't find better
+    sLoop: for (let s = 1; s < kSize; s *= 2) {
+        // Check if this pattern size works for all results
+        for (let i = 0; i < results.length; ++i) {
+            const pattern = results[i].pattern;
+            // (lx,ly) is a "local" coordinate inside the first block
+            for (let ly = 0; ly < s; ++ly) {
+                for (let lx = 0; lx < s; ++lx) {
+                    const maskInFirstBlock = pattern[ly * kSize + lx];
+                    for (let y = ly + s; y < kSize; y += s) {
+                        for (let x = lx + s; x < kSize; x += s) {
+                            if (pattern[y * kSize + x] !== maskInFirstBlock) {
+                                continue sLoop;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // If we haven't continue'd, we found a good value!
+        patternSize = s;
+        break;
+    }
+    // Generate the shader!
+    const infoString = `${info.vendor} ${info.architecture} ${info.device} ${info.description}`.trim();
+    let out = `\
+// ${infoString}
+fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
+`;
+    if (patternSize > 1) {
+        out += `\
+  let i = (xy.y % ${patternSize}) * ${patternSize} + (xy.x % ${patternSize});
+`;
+    }
+    for (let i = 0; i < results.length - 1; ++i) {
+        const endAlpha = results[i + 1].startAlpha;
+        const capturedPattern = results[i].pattern;
+        // Extract the patternSize-sized pattern from the captured result.
+        const pattern = [];
+        for (let y = 0; y < patternSize; ++y) {
+            for (let x = 0; x < patternSize; ++x) {
+                pattern.push(capturedPattern[y * kSize + x]);
+            }
+        }
+        const cmp = tieBreakDownward ? '<=' : '<';
+        const alphaNumerator = Math.round(endAlpha * halfDenominator * 2) / 2;
+        const alphaFraction = `${alphaNumerator} / ${halfDenominator}.0`;
+        if (patternSize === 1) {
+            const mask = `0x${pattern[0].toString(16)}`;
+            out += `  if alpha ${cmp} ${alphaFraction} { return ${mask}; }\n`;
+        }
+        else {
+            const array = Array.from(pattern, (v) => '0x' + v.toString(16)).join(', ');
+            out += `  if alpha ${cmp} ${alphaFraction} { return array(${array}u)[i]; }\n`;
+        }
+    }
+    out += `\
+  return 0xf;
+}`;
+    dialogText.textContent = out;
+    kEmulatedAlphaToCoverage['(generated from your device)'] = out;
+    return out;
+}
+
 //
 // GUI controls
 //
@@ -8913,11 +9211,12 @@ const kInitConfig = {
     sampleCount: 4,
     sizeLog2: 8,
     showResolvedColor: true,
-    CrossingGradients_gradient: true,
     CrossingGradients_color1: 0xffffff,
-    CrossingGradients_alpha1: 0,
+    CrossingGradients_alpha1top: 0,
+    CrossingGradients_alpha1bottom: 0,
     CrossingGradients_color2: 0x0000ff,
-    CrossingGradients_alpha2: 5,
+    CrossingGradients_alpha2left: 0,
+    CrossingGradients_alpha2right: 0,
     CrossingGradients_animate: true,
     FoliageCommon_featheringWidthPx: 1,
     Foliage_cameraDistanceLog: 0,
@@ -8953,7 +9252,7 @@ gui.width = 340;
             const trigger = () => {
                 Object.assign(config, kInitConfig);
                 fn();
-                enableDisableDevice();
+                updateEmulationPanels();
                 showHideScenePanels();
                 gui.updateDisplay();
                 window.location.hash = key;
@@ -8967,6 +9266,10 @@ gui.width = 340;
             element.textContent = numberedName;
             element.onclick = trigger;
         };
+        window.addEventListener('hashchange', () => {
+            const hash = window.location.hash;
+            document.querySelector(hash)?.click();
+        });
         btn('foliageA2C', 'foliage with alpha-to-coverage', //
         () => { });
         btn('foliageAlphaTest', 'foliage with alpha-test (aliased)', //
@@ -8981,33 +9284,36 @@ gui.width = 340;
         () => {
             config.mode = 'blending';
             config.scene = 'CrossingGradients';
-            config.CrossingGradients_gradient = true;
             config.CrossingGradients_color1 = 0xffffff;
-            config.CrossingGradients_alpha1 = 100;
+            config.CrossingGradients_alpha1top = 0;
+            config.CrossingGradients_alpha1bottom = 100;
             config.CrossingGradients_color2 = 0x000000;
-            config.CrossingGradients_alpha2 = 0;
+            config.CrossingGradients_alpha2left = 0;
+            config.CrossingGradients_alpha2right = 0;
             config.CrossingGradients_animate = false;
         });
         btn('overlappingGradientsBlend', 'overlapping gradients (blending)', //
         () => {
             config.mode = 'blending';
             config.scene = 'CrossingGradients';
-            config.CrossingGradients_gradient = true;
             config.CrossingGradients_color1 = 0xffffff;
-            config.CrossingGradients_alpha1 = 100;
+            config.CrossingGradients_alpha1top = 0;
+            config.CrossingGradients_alpha1bottom = 100;
             config.CrossingGradients_color2 = 0x000000;
-            config.CrossingGradients_alpha2 = 100;
+            config.CrossingGradients_alpha2left = 0;
+            config.CrossingGradients_alpha2right = 100;
             config.CrossingGradients_animate = false;
         });
         btn('overlappingGradientsAlphaTest', 'overlapping gradients (alpha-test)', //
         () => {
             config.mode = 'alphatest';
             config.scene = 'CrossingGradients';
-            config.CrossingGradients_gradient = true;
             config.CrossingGradients_color1 = 0xffffff;
-            config.CrossingGradients_alpha1 = 100;
+            config.CrossingGradients_alpha1top = 0;
+            config.CrossingGradients_alpha1bottom = 100;
             config.CrossingGradients_color2 = 0x000000;
-            config.CrossingGradients_alpha2 = 100;
+            config.CrossingGradients_alpha2left = 0;
+            config.CrossingGradients_alpha2right = 100;
             config.CrossingGradients_animate = false;
         });
         btn('overlappingGradientsAlphaTestZoomed', 'overlapping gradients (alpha-test, zoomed)', //
@@ -9016,11 +9322,12 @@ gui.width = 340;
             config.scene = 'CrossingGradients';
             config.sizeLog2 = 4;
             config.showResolvedColor = false;
-            config.CrossingGradients_gradient = true;
             config.CrossingGradients_color1 = 0xffffff;
-            config.CrossingGradients_alpha1 = 100;
+            config.CrossingGradients_alpha1top = 0;
+            config.CrossingGradients_alpha1bottom = 100;
             config.CrossingGradients_color2 = 0x000000;
-            config.CrossingGradients_alpha2 = 100;
+            config.CrossingGradients_alpha2left = 0;
+            config.CrossingGradients_alpha2right = 100;
             config.CrossingGradients_animate = false;
         });
         btn('overlappingGradientsA2CNVIDIAZoomed', 'overlapping gradients (A2C, NVIDIA, zoomed)', //
@@ -9030,11 +9337,12 @@ gui.width = 340;
             config.scene = 'CrossingGradients';
             config.sizeLog2 = 4;
             config.showResolvedColor = false;
-            config.CrossingGradients_gradient = true;
             config.CrossingGradients_color1 = 0xffffff;
-            config.CrossingGradients_alpha1 = 100;
+            config.CrossingGradients_alpha1top = 0;
+            config.CrossingGradients_alpha1bottom = 100;
             config.CrossingGradients_color2 = 0x000000;
-            config.CrossingGradients_alpha2 = 100;
+            config.CrossingGradients_alpha2left = 0;
+            config.CrossingGradients_alpha2right = 100;
             config.CrossingGradients_animate = false;
         });
         btn('overlappingGradientsA2CNVIDIAZoomedResolved', 'overlapping gradients (A2C, NVIDIA, zoomed/resolved)', //
@@ -9043,11 +9351,12 @@ gui.width = 340;
             config.emulatedDevice = 'NVIDIA GeForce RTX 3070';
             config.scene = 'CrossingGradients';
             config.sizeLog2 = 4;
-            config.CrossingGradients_gradient = true;
             config.CrossingGradients_color1 = 0xffffff;
-            config.CrossingGradients_alpha1 = 100;
+            config.CrossingGradients_alpha1top = 0;
+            config.CrossingGradients_alpha1bottom = 100;
             config.CrossingGradients_color2 = 0x000000;
-            config.CrossingGradients_alpha2 = 100;
+            config.CrossingGradients_alpha2left = 0;
+            config.CrossingGradients_alpha2right = 100;
             config.CrossingGradients_animate = false;
         });
         btn('overlappingGradientsA2CNVIDIA', 'overlapping gradients (A2C, NVIDIA)', //
@@ -9055,49 +9364,81 @@ gui.width = 340;
             config.mode = 'emulated';
             config.emulatedDevice = 'NVIDIA GeForce RTX 3070';
             config.scene = 'CrossingGradients';
-            config.CrossingGradients_gradient = true;
             config.CrossingGradients_color1 = 0xffffff;
-            config.CrossingGradients_alpha1 = 100;
+            config.CrossingGradients_alpha1top = 0;
+            config.CrossingGradients_alpha1bottom = 100;
             config.CrossingGradients_color2 = 0x000000;
-            config.CrossingGradients_alpha2 = 100;
+            config.CrossingGradients_alpha2left = 0;
+            config.CrossingGradients_alpha2right = 100;
             config.CrossingGradients_animate = false;
         });
-        btn('overlappingGradientsA2CQualcommZoomedResolved', 'overlapping gradients (A2C, Qualcomm, zoomed/resolved)', //
+        btn('overlappingGradientsA2CApple', 'overlapping gradients (A2C, Apple)', //
+        () => {
+            config.mode = 'emulated';
+            config.emulatedDevice = 'Apple M1 Pro';
+            config.scene = 'CrossingGradients';
+            config.CrossingGradients_color1 = 0xffffff;
+            config.CrossingGradients_alpha1top = 0;
+            config.CrossingGradients_alpha1bottom = 100;
+            config.CrossingGradients_color2 = 0x000000;
+            config.CrossingGradients_alpha2left = 0;
+            config.CrossingGradients_alpha2right = 100;
+            config.CrossingGradients_animate = false;
+        });
+        btn('solidInspectorApple', 'solid pattern inspector (Apple)', //
+        () => {
+            config.mode = 'emulated';
+            config.emulatedDevice = 'Apple M1 Pro';
+            config.scene = 'CrossingGradients';
+            config.sizeLog2 = 3;
+            config.CrossingGradients_animate = true;
+        });
+        btn('solidInspectorAMD', 'solid pattern inspector (AMD)', //
+        () => {
+            config.mode = 'emulated';
+            config.emulatedDevice = 'AMD Radeon RX 580';
+            config.scene = 'CrossingGradients';
+            config.sizeLog2 = 3;
+            config.CrossingGradients_animate = true;
+        });
+        btn('overlappingGradientsA2CAMD', 'overlapping gradients (A2C, AMD)', //
+        () => {
+            config.mode = 'emulated';
+            config.emulatedDevice = 'AMD Radeon RX 580';
+            config.scene = 'CrossingGradients';
+            config.CrossingGradients_color1 = 0xffffff;
+            config.CrossingGradients_alpha1top = 0;
+            config.CrossingGradients_alpha1bottom = 100;
+            config.CrossingGradients_color2 = 0x000000;
+            config.CrossingGradients_alpha2left = 0;
+            config.CrossingGradients_alpha2right = 100;
+            config.CrossingGradients_animate = false;
+        });
+        btn('solidInspectorQualcomm', 'solid pattern inspector (Qualcomm)', //
         () => {
             config.mode = 'emulated';
             config.emulatedDevice = 'Qualcomm Adreno 630';
             config.scene = 'CrossingGradients';
-            config.sizeLog2 = 4;
-            config.CrossingGradients_gradient = true;
-            config.CrossingGradients_color1 = 0xffffff;
-            config.CrossingGradients_alpha1 = 100;
-            config.CrossingGradients_color2 = 0x000000;
-            config.CrossingGradients_alpha2 = 100;
-            config.CrossingGradients_animate = false;
+            config.sizeLog2 = 3;
+            config.CrossingGradients_animate = true;
         });
         btn('overlappingGradientsA2CQualcomm', 'overlapping gradients (A2C, Qualcomm)', //
         () => {
             config.mode = 'emulated';
             config.emulatedDevice = 'Qualcomm Adreno 630';
             config.scene = 'CrossingGradients';
-            config.CrossingGradients_gradient = true;
             config.CrossingGradients_color1 = 0xffffff;
-            config.CrossingGradients_alpha1 = 100;
+            config.CrossingGradients_alpha1top = 0;
+            config.CrossingGradients_alpha1bottom = 100;
             config.CrossingGradients_color2 = 0x000000;
-            config.CrossingGradients_alpha2 = 100;
+            config.CrossingGradients_alpha2left = 0;
+            config.CrossingGradients_alpha2right = 100;
             config.CrossingGradients_animate = false;
         });
         btn('blurryLeafNVIDIA', 'blurry-leaf closeup (NVIDIA)', //
         () => {
             config.mode = 'emulated';
             config.emulatedDevice = 'NVIDIA GeForce RTX 3070';
-            config.scene = 'Leaf';
-            config.FoliageCommon_featheringWidthPx = 25;
-        });
-        btn('blurryLeafQualcomm', 'blurry-leaf closeup (Qualcomm)', //
-        () => {
-            config.mode = 'emulated';
-            config.emulatedDevice = 'Qualcomm Adreno 630';
             config.scene = 'Leaf';
             config.FoliageCommon_featheringWidthPx = 25;
         });
@@ -9108,71 +9449,88 @@ gui.width = 340;
             config.scene = 'Leaf';
             config.FoliageCommon_featheringWidthPx = 25;
         });
+        btn('blurryLeafQualcomm', 'blurry-leaf closeup (Qualcomm)', //
+        () => {
+            config.mode = 'emulated';
+            config.emulatedDevice = 'Qualcomm Adreno 630';
+            config.scene = 'Leaf';
+            config.FoliageCommon_featheringWidthPx = 25;
+        });
         btn('blurryLeafNative', 'blurry-leaf closeup (native)', //
         () => {
             config.mode = 'native';
             config.scene = 'Leaf';
             config.FoliageCommon_featheringWidthPx = 25;
         });
-        btn('solidInspectorNVIDIA', 'solid pattern inspector (NVIDIA)', //
-        () => {
-            config.mode = 'emulated';
-            config.emulatedDevice = 'NVIDIA GeForce RTX 3070';
-            config.scene = 'CrossingGradients';
-            config.sizeLog2 = 3;
-            config.CrossingGradients_gradient = false;
-            config.CrossingGradients_animate = true;
-        });
-        btn('solidInspectorApple', 'solid pattern inspector (Apple)', //
-        () => {
-            config.mode = 'emulated';
-            config.emulatedDevice = 'Apple M1 Pro';
-            config.scene = 'CrossingGradients';
-            config.sizeLog2 = 3;
-            config.CrossingGradients_gradient = false;
-            config.CrossingGradients_animate = true;
-        });
-        btn('solidInspectorQualcomm', 'solid pattern inspector (Qualcomm)', //
-        () => {
-            config.mode = 'emulated';
-            config.emulatedDevice = 'Qualcomm Adreno 630';
-            config.scene = 'CrossingGradients';
-            config.sizeLog2 = 3;
-            config.CrossingGradients_gradient = false;
-            config.CrossingGradients_animate = true;
-        });
-        btn('solidInspectorNative', 'solid pattern inspector (native)', //
-        () => {
-            config.scene = 'CrossingGradients';
-            config.sizeLog2 = 3;
-            config.CrossingGradients_gradient = false;
-            config.CrossingGradients_animate = true;
-        });
-        btn('foliageBlurry', 'foliage (alpha-to-coverage, blurry)', //
+        btn('foliageBlurry', 'blurry foliage (alpha-to-coverage, NVIDIA)', //
         () => {
             config.sizeLog2 = 13;
-            config.FoliageCommon_featheringWidthPx = 15;
+            config.mode = 'emulated';
+            config.emulatedDevice = 'NVIDIA GeForce RTX 3070';
+            config.FoliageCommon_featheringWidthPx = 20;
+        });
+        btn('generator', 'Emulator generator', () => {
+            config.scene = 'CrossingGradients';
+            config.sizeLog2 = 3;
+            config.mode = 'emulated';
+            config.mode2 = 'native';
+            config.emulatedDevice = '(generated from your device)';
+            config.CrossingGradients_animate = true;
         });
     }
-    const visualizationPanel = gui.addFolder('Visualization');
+    const visualizationPanel = gui.addFolder('Rendering & Visualization');
     visualizationPanel.open();
     visualizationPanel.add(config, 'sampleCount', [4]);
     visualizationPanel.add(config, 'sizeLog2', 0, 13, 1).name('size = 2**');
     visualizationPanel.add(config, 'showResolvedColor', false);
-    const enableDisableDevice = () => {
+    const updateEmulationPanels = () => {
         emulatedDeviceElem.disabled = !(config.mode === 'emulated' || config.mode2 === 'emulated');
+        if (config.emulatedDevice === '(generated from your device)') {
+            generatorFolder.show();
+        }
+        else {
+            generatorFolder.hide();
+        }
+        if (kEmulatedAlphaToCoverage['(generated from your device)'] !== kNullEmulator) {
+            generatorFormFolder.show();
+        }
     };
     visualizationPanel
         .add(config, 'mode', kModeNames)
-        .onChange(enableDisableDevice);
+        .onChange(updateEmulationPanels);
     visualizationPanel
         .add(config, 'mode2', { none: 'none', ...kModeNames })
         .name('comparison dot')
-        .onChange(enableDisableDevice);
+        .onChange(updateEmulationPanels);
     const emulatedDeviceElem = visualizationPanel
         .add(config, 'emulatedDevice', Object.keys(kEmulatedAlphaToCoverage))
-        .name('device to emulate').domElement.childNodes[0];
-    enableDisableDevice();
+        .name('device to emulate')
+        .onChange(updateEmulationPanels).domElement
+        .childNodes[0];
+    const generatorButtons = {
+        async generate() {
+            await generateAlphaToCoverage(adapter, device);
+            updateEmulationPanels();
+        },
+        googleForm() {
+            const formURL = 'https://docs.google.com/forms/d/e/1FAIpQLScwAdI56MlLPms4ACR4EjGQ7nUwQLxYIigtwHnKm93zy2_4QQ/viewform?usp=pp_url&entry.1014162091=' +
+                encodeURIComponent(kEmulatedAlphaToCoverage['(generated from your device)']);
+            window.open(formURL, '_blank')?.focus();
+        },
+    };
+    const generatorFolder = gui.addFolder('Emulator Generator');
+    generatorFolder.open();
+    generatorFolder.hide();
+    generatorFolder
+        .add(generatorButtons, 'generate')
+        .name('Generate an emulator for this device');
+    const generatorFormFolder = generatorFolder //
+        .addFolder('Is your device different from the others here?');
+    generatorFormFolder.open();
+    generatorFormFolder.hide();
+    generatorFormFolder
+        .add(generatorButtons, 'googleForm')
+        .name('Submit it here!');
     const scenesPanel = gui.addFolder('Scenes');
     scenesPanel.open();
     const scenePanels = [];
@@ -9198,21 +9556,24 @@ gui.width = 340;
     sceneCrossingGradients.open();
     scenePanels.push(sceneCrossingGradients);
     {
-        sceneCrossingGradients
-            .add(config, 'CrossingGradients_gradient', true)
-            .name('use gradient');
         const draw1Panel = sceneCrossingGradients.addFolder('Draw 1 (top->bottom)');
         draw1Panel.open();
         draw1Panel.addColor(config, 'CrossingGradients_color1').name('color');
         draw1Panel
-            .add(config, 'CrossingGradients_alpha1', 0, 100, 0.001)
-            .name('alpha %');
+            .add(config, 'CrossingGradients_alpha1top', 0, 100, 0.001)
+            .name('alpha % top');
+        draw1Panel
+            .add(config, 'CrossingGradients_alpha1bottom', 0, 100, 0.001)
+            .name('alpha % bottom');
         const draw2Panel = sceneCrossingGradients.addFolder('Draw 2 (left->right)');
         draw2Panel.open();
         draw2Panel.addColor(config, 'CrossingGradients_color2').name('color');
         draw2Panel
-            .add(config, 'CrossingGradients_alpha2', 0, 100, 0.001)
-            .name('alpha %');
+            .add(config, 'CrossingGradients_alpha2left', 0, 100, 0.001)
+            .name('alpha % left');
+        draw2Panel
+            .add(config, 'CrossingGradients_alpha2right', 0, 100, 0.001)
+            .name('alpha % right');
         draw2Panel.add(config, 'CrossingGradients_animate', false).name('animate');
     }
     const sceneLeaf = scenesPanel.addFolder('Leaf/Foliage scene options');
@@ -9235,8 +9596,24 @@ gui.width = 340;
             .name('camera rotation');
         sceneFoliage.add(config, 'Foliage_animate', false).name('animate');
     }
+    updateEmulationPanels();
     showHideScenePanels();
 }
+//
+// Device + scene initialization
+//
+const canvas = document.querySelector('canvas');
+const [adapter, device] = await (async () => {
+    const adapter = await navigator.gpu?.requestAdapter();
+    const device = await adapter?.requestDevice();
+    quitIfWebGPUNotAvailable(adapter, device);
+    return [adapter, device];
+})();
+const scenes = {
+    CrossingGradients: new CrossingGradients(device),
+    Leaf: new Leaf(device),
+    Foliage: new Foliage(device),
+};
 //
 // Canvas setup
 //
@@ -9428,7 +9805,10 @@ function render() {
     }
     device.queue.submit([commandEncoder.finish()]);
 }
-function frame() {
+let lastFrameTime = 0;
+function frame(time) {
+    setFrameTimeStep(time - lastFrameTime);
+    lastFrameTime = time;
     scenes[config.scene].modifyConfigForAnimation(config);
     gui.updateDisplay();
     updateCanvasSize();
