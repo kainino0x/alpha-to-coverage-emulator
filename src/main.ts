@@ -1,4 +1,4 @@
-// TODO add some notes to the article about how "moving" samples around improves the result. E.g. by showing Apple which is 2x2 and doesn't, then AMD or Qualcomm which do.
+// TODO: replace "use gradient" with two alphas probably
 import { GUI } from 'dat.gui';
 
 import showMultisampleTextureWGSL from './ShowMultisampleTexture.wgsl';
@@ -13,25 +13,7 @@ import { CrossingGradients } from './scenes/CrossingGradients';
 import { Leaf } from './scenes/Leaf';
 import { Foliage } from './scenes/Foliage';
 import { generateAlphaToCoverage } from './emulator-generator/generateAlphaToCoverage';
-import { resetAnimationStartTime } from './animationTime';
-
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const [adapter, device] = await (async () => {
-  const adapter = await navigator.gpu?.requestAdapter();
-  const device = await adapter?.requestDevice();
-  quitIfWebGPUNotAvailable(adapter, device);
-  return [adapter!, device];
-})();
-
-//
-// Scene initialization
-//
-
-const scenes = {
-  CrossingGradients: new CrossingGradients(device),
-  Leaf: new Leaf(device),
-  Foliage: new Foliage(device),
-};
+import { resetRelativeAnimationStartTime } from './animationTime';
 
 //
 // GUI controls
@@ -99,7 +81,7 @@ gui.width = 340;
       const trigger = () => {
         Object.assign(config, kInitConfig);
         fn();
-        resetAnimationStartTime();
+        resetRelativeAnimationStartTime();
         updateEmulationPanels();
         showHideScenePanels();
         gui.updateDisplay();
@@ -116,6 +98,10 @@ gui.width = 340;
       element.textContent = numberedName;
       element.onclick = trigger;
     };
+    window.addEventListener('hashchange', () => {
+      const hash = window.location.hash;
+      (document.querySelector(hash) as HTMLAnchorElement | null)?.click();
+    });
 
     btn(
       'foliageA2C',
@@ -243,19 +229,69 @@ gui.width = 340;
       }
     );
     btn(
-      'overlappingGradientsA2CQualcommZoomedResolved',
-      'overlapping gradients (A2C, Qualcomm, zoomed/resolved)', //
+      'overlappingGradientsA2CApple',
+      'overlapping gradients (A2C, Apple)', //
       () => {
         config.mode = 'emulated';
-        config.emulatedDevice = 'Qualcomm Adreno 630';
+        config.emulatedDevice = 'Apple M1 Pro';
         config.scene = 'CrossingGradients';
-        config.sizeLog2 = 4;
         config.CrossingGradients_gradient = true;
         config.CrossingGradients_color1 = 0xffffff;
         config.CrossingGradients_alpha1 = 100;
         config.CrossingGradients_color2 = 0x000000;
         config.CrossingGradients_alpha2 = 100;
         config.CrossingGradients_animate = false;
+      }
+    );
+    btn(
+      'solidInspectorApple',
+      'solid pattern inspector (Apple)', //
+      () => {
+        config.mode = 'emulated';
+        config.emulatedDevice = 'Apple M1 Pro';
+        config.scene = 'CrossingGradients';
+        config.sizeLog2 = 3;
+        config.CrossingGradients_gradient = false;
+        config.CrossingGradients_animate = true;
+      }
+    );
+    btn(
+      'solidInspectorAMD',
+      'solid pattern inspector (AMD)', //
+      () => {
+        config.mode = 'emulated';
+        config.emulatedDevice = 'AMD Radeon RX 580';
+        config.scene = 'CrossingGradients';
+        config.sizeLog2 = 3;
+        config.CrossingGradients_gradient = false;
+        config.CrossingGradients_animate = true;
+      }
+    );
+    btn(
+      'overlappingGradientsA2CAMD',
+      'overlapping gradients (A2C, AMD)', //
+      () => {
+        config.mode = 'emulated';
+        config.emulatedDevice = 'AMD Radeon RX 580';
+        config.scene = 'CrossingGradients';
+        config.CrossingGradients_gradient = true;
+        config.CrossingGradients_color1 = 0xffffff;
+        config.CrossingGradients_alpha1 = 100;
+        config.CrossingGradients_color2 = 0x000000;
+        config.CrossingGradients_alpha2 = 100;
+        config.CrossingGradients_animate = false;
+      }
+    );
+    btn(
+      'solidInspectorQualcomm',
+      'solid pattern inspector (Qualcomm)', //
+      () => {
+        config.mode = 'emulated';
+        config.emulatedDevice = 'Qualcomm Adreno 630';
+        config.scene = 'CrossingGradients';
+        config.sizeLog2 = 3;
+        config.CrossingGradients_gradient = false;
+        config.CrossingGradients_animate = true;
       }
     );
     btn(
@@ -284,21 +320,21 @@ gui.width = 340;
       }
     );
     btn(
-      'blurryLeafQualcomm',
-      'blurry-leaf closeup (Qualcomm)', //
-      () => {
-        config.mode = 'emulated';
-        config.emulatedDevice = 'Qualcomm Adreno 630';
-        config.scene = 'Leaf';
-        config.FoliageCommon_featheringWidthPx = 25;
-      }
-    );
-    btn(
       'blurryLeafApple',
       'blurry-leaf closeup (Apple)', //
       () => {
         config.mode = 'emulated';
         config.emulatedDevice = 'Apple M1 Pro';
+        config.scene = 'Leaf';
+        config.FoliageCommon_featheringWidthPx = 25;
+      }
+    );
+    btn(
+      'blurryLeafQualcomm',
+      'blurry-leaf closeup (Qualcomm)', //
+      () => {
+        config.mode = 'emulated';
+        config.emulatedDevice = 'Qualcomm Adreno 630';
         config.scene = 'Leaf';
         config.FoliageCommon_featheringWidthPx = 25;
       }
@@ -313,60 +349,16 @@ gui.width = 340;
       }
     );
     btn(
-      'solidInspectorNVIDIA',
-      'solid pattern inspector (NVIDIA)', //
-      () => {
-        config.mode = 'emulated';
-        config.emulatedDevice = 'NVIDIA GeForce RTX 3070';
-        config.scene = 'CrossingGradients';
-        config.sizeLog2 = 3;
-        config.CrossingGradients_gradient = false;
-        config.CrossingGradients_animate = true;
-      }
-    );
-    btn(
-      'solidInspectorApple',
-      'solid pattern inspector (Apple)', //
-      () => {
-        config.mode = 'emulated';
-        config.emulatedDevice = 'Apple M1 Pro';
-        config.scene = 'CrossingGradients';
-        config.sizeLog2 = 3;
-        config.CrossingGradients_gradient = false;
-        config.CrossingGradients_animate = true;
-      }
-    );
-    btn(
-      'solidInspectorQualcomm',
-      'solid pattern inspector (Qualcomm)', //
-      () => {
-        config.mode = 'emulated';
-        config.emulatedDevice = 'Qualcomm Adreno 630';
-        config.scene = 'CrossingGradients';
-        config.sizeLog2 = 3;
-        config.CrossingGradients_gradient = false;
-        config.CrossingGradients_animate = true;
-      }
-    );
-    btn(
-      'solidInspectorNative',
-      'solid pattern inspector (native)', //
-      () => {
-        config.scene = 'CrossingGradients';
-        config.sizeLog2 = 3;
-        config.CrossingGradients_gradient = false;
-        config.CrossingGradients_animate = true;
-      }
-    );
-    btn(
       'foliageBlurry',
-      'foliage (alpha-to-coverage, blurry)', //
+      'blurry foliage (alpha-to-coverage, NVIDIA)', //
       () => {
         config.sizeLog2 = 13;
-        config.FoliageCommon_featheringWidthPx = 15;
+        config.mode = 'emulated';
+        config.emulatedDevice = 'NVIDIA GeForce RTX 3070';
+        config.FoliageCommon_featheringWidthPx = 20;
       }
     );
-    btn('generator', 'Emulator Generator', () => {
+    btn('generator', 'Emulator generator', () => {
       config.scene = 'CrossingGradients';
       config.sizeLog2 = 3;
       config.mode = 'emulated';
@@ -396,7 +388,7 @@ gui.width = 340;
     ) {
       generatorFormFolder.show();
     }
-    resetAnimationStartTime();
+    resetRelativeAnimationStartTime();
   };
   visualizationPanel
     .add(config, 'mode', kModeNames)
@@ -414,7 +406,7 @@ gui.width = 340;
   const generatorButtons = {
     async generate() {
       await generateAlphaToCoverage(adapter, device);
-      resetAnimationStartTime();
+      resetRelativeAnimationStartTime();
       updateEmulationPanels();
     },
     googleForm() {
@@ -514,6 +506,24 @@ gui.width = 340;
   updateEmulationPanels();
   showHideScenePanels();
 }
+
+//
+// Device + scene initialization
+//
+
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const [adapter, device] = await (async () => {
+  const adapter = await navigator.gpu?.requestAdapter();
+  const device = await adapter?.requestDevice();
+  quitIfWebGPUNotAvailable(adapter, device);
+  return [adapter!, device];
+})();
+
+const scenes = {
+  CrossingGradients: new CrossingGradients(device),
+  Leaf: new Leaf(device),
+  Foliage: new Foliage(device),
+};
 
 //
 // Canvas setup

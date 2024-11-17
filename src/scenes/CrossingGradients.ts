@@ -2,7 +2,7 @@ import { Config, ModeName } from '../main';
 import { DeviceName } from '../emulatedAlphaToCoverage';
 import crossingGradientsWGSL from './CrossingGradients.wgsl';
 import { Scene } from './Scene';
-import { animationTime } from '../animationTime';
+import { relativeAnimationTime } from '../animationTime';
 
 export class CrossingGradients extends Scene {
   private readonly bufVertexColors: GPUBuffer;
@@ -19,7 +19,7 @@ export class CrossingGradients extends Scene {
     if (!config.CrossingGradients_animate) return;
 
     // scrub alpha2 over 15 seconds
-    const alpha = ((animationTime() / 15000) % 1) * (100 + 10) - 5;
+    const alpha = ((relativeAnimationTime() / 15000) % 1) * (100 + 10) - 5;
     config.CrossingGradients_alpha2 = Math.max(0, Math.min(alpha, 100));
   }
 
