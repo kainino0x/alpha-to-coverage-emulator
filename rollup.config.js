@@ -57,22 +57,4 @@ export default [
     ],
     watch: { clearScreen: false },
   },
-  {
-    input: 'src/emulator-generator/main.ts',
-    output: [
-      {
-        file: `${outPath}/emulator-generator/main.js`,
-        format: 'esm',
-        sourcemap: true,
-      },
-    ],
-    plugins: [
-      wgslPlugin(),
-      nodeResolve(),
-      commonjs(),
-      filenamePlugin(),
-      typescript({ tsconfig: './tsconfig.json' }),
-    ],
-    watch: { clearScreen: false },
-  },
 ];
