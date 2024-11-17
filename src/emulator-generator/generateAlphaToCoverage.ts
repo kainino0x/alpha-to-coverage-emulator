@@ -1,6 +1,9 @@
 import instancedWhiteGradientWGSL from './InstancedWhiteGradient.wgsl';
 import copyMaskToBufferWGSL from './CopyMaskToBuffer.wgsl';
-import { kEmulatedAlphaToCoverage, kNullEmulator } from '../emulatedAlphaToCoverage';
+import {
+  kEmulatedAlphaToCoverage,
+  kNullEmulator,
+} from '../emulatedAlphaToCoverage';
 
 const dialogBox = document.createElement('dialog');
 dialogBox.close();
@@ -21,7 +24,9 @@ export async function generateAlphaToCoverage(
 ) {
   dialogBox.showModal();
 
-  if (kEmulatedAlphaToCoverage['(generated from your device)'] !== kNullEmulator) {
+  if (
+    kEmulatedAlphaToCoverage['(generated from your device)'] !== kNullEmulator
+  ) {
     return;
   }
 

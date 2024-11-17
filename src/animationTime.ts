@@ -1,9 +1,9 @@
 let frameTimeStep = 0;
 
 export function setFrameTimeStep(t: number) {
-    frameTimeStep = t;
+  frameTimeStep = t;
 }
 
 export function getFrameTimeStep() {
-    return frameTimeStep;
+  return frameTimeStep;
 }

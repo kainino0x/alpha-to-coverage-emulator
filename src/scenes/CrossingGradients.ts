@@ -23,8 +23,8 @@ export class CrossingGradients extends Scene {
     if (this.alphaForAnimation >= 0 && this.alphaForAnimation <= 100) {
       this.alphaForAnimation = config.CrossingGradients_alpha2right;
     }
-    this.alphaForAnimation += (getFrameTimeStep() / 15000 * 110);
-    this.alphaForAnimation = (this.alphaForAnimation + 5) % 110 - 5;
+    this.alphaForAnimation += (getFrameTimeStep() / 15000) * 110;
+    this.alphaForAnimation = ((this.alphaForAnimation + 5) % 110) - 5;
     const alpha = Math.max(0, Math.min(this.alphaForAnimation, 100));
     config.CrossingGradients_alpha2left = alpha;
     config.CrossingGradients_alpha2right = alpha;

@@ -9,7 +9,8 @@ export class Foliage extends FoliageCommon {
     if (!config.Foliage_animate) return;
 
     config.Foliage_cameraRotation =
-      (config.Foliage_cameraRotation + getFrameTimeStep() / 60_000 * 360) % 360;
+      (config.Foliage_cameraRotation + (getFrameTimeStep() / 60_000) * 360) %
+      360;
   }
 
   render(
