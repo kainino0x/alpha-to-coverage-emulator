@@ -1,4 +1,3 @@
-// TODO: replace "use gradient" with two alphas probably
 import { GUI } from 'dat.gui';
 
 import showMultisampleTextureWGSL from './ShowMultisampleTexture.wgsl';
@@ -13,7 +12,7 @@ import { CrossingGradients } from './scenes/CrossingGradients';
 import { Leaf } from './scenes/Leaf';
 import { Foliage } from './scenes/Foliage';
 import { generateAlphaToCoverage } from './emulator-generator/generateAlphaToCoverage';
-import { resetRelativeAnimationStartTime } from './animationTime';
+import { setFrameTimeStep } from './animationTime';
 
 //
 // GUI controls
@@ -38,11 +37,12 @@ const kInitConfig = {
   sampleCount: 4,
   sizeLog2: 8,
   showResolvedColor: true,
-  CrossingGradients_gradient: true,
   CrossingGradients_color1: 0xffffff,
-  CrossingGradients_alpha1: 0,
+  CrossingGradients_alpha1top: 0,
+  CrossingGradients_alpha1bottom: 0,
   CrossingGradients_color2: 0x0000ff,
-  CrossingGradients_alpha2: 5,
+  CrossingGradients_alpha2left: 0,
+  CrossingGradients_alpha2right: 0,
   CrossingGradients_animate: true,
   FoliageCommon_featheringWidthPx: 1,
   Foliage_cameraDistanceLog: 0,
@@ -81,7 +81,6 @@ gui.width = 340;
       const trigger = () => {
         Object.assign(config, kInitConfig);
         fn();
-        resetRelativeAnimationStartTime();
         updateEmulationPanels();
         showHideScenePanels();
         gui.updateDisplay();
@@ -128,11 +127,12 @@ gui.width = 340;
       () => {
         config.mode = 'blending';
         config.scene = 'CrossingGradients';
-        config.CrossingGradients_gradient = true;
         config.CrossingGradients_color1 = 0xffffff;
-        config.CrossingGradients_alpha1 = 100;
+        config.CrossingGradients_alpha1top = 0;
+        config.CrossingGradients_alpha1bottom = 100;
         config.CrossingGradients_color2 = 0x000000;
-        config.CrossingGradients_alpha2 = 0;
+        config.CrossingGradients_alpha2left = 0;
+        config.CrossingGradients_alpha2right = 0;
         config.CrossingGradients_animate = false;
       }
     );
@@ -142,11 +142,12 @@ gui.width = 340;
       () => {
         config.mode = 'blending';
         config.scene = 'CrossingGradients';
-        config.CrossingGradients_gradient = true;
         config.CrossingGradients_color1 = 0xffffff;
-        config.CrossingGradients_alpha1 = 100;
+        config.CrossingGradients_alpha1top = 0;
+        config.CrossingGradients_alpha1bottom = 100;
         config.CrossingGradients_color2 = 0x000000;
-        config.CrossingGradients_alpha2 = 100;
+        config.CrossingGradients_alpha2left = 0;
+        config.CrossingGradients_alpha2right = 100;
         config.CrossingGradients_animate = false;
       }
     );
@@ -156,11 +157,12 @@ gui.width = 340;
       () => {
         config.mode = 'alphatest';
         config.scene = 'CrossingGradients';
-        config.CrossingGradients_gradient = true;
         config.CrossingGradients_color1 = 0xffffff;
-        config.CrossingGradients_alpha1 = 100;
+        config.CrossingGradients_alpha1top = 0;
+        config.CrossingGradients_alpha1bottom = 100;
         config.CrossingGradients_color2 = 0x000000;
-        config.CrossingGradients_alpha2 = 100;
+        config.CrossingGradients_alpha2left = 0;
+        config.CrossingGradients_alpha2right = 100;
         config.CrossingGradients_animate = false;
       }
     );
@@ -172,11 +174,12 @@ gui.width = 340;
         config.scene = 'CrossingGradients';
         config.sizeLog2 = 4;
         config.showResolvedColor = false;
-        config.CrossingGradients_gradient = true;
         config.CrossingGradients_color1 = 0xffffff;
-        config.CrossingGradients_alpha1 = 100;
+        config.CrossingGradients_alpha1top = 0;
+        config.CrossingGradients_alpha1bottom = 100;
         config.CrossingGradients_color2 = 0x000000;
-        config.CrossingGradients_alpha2 = 100;
+        config.CrossingGradients_alpha2left = 0;
+        config.CrossingGradients_alpha2right = 100;
         config.CrossingGradients_animate = false;
       }
     );
@@ -189,11 +192,12 @@ gui.width = 340;
         config.scene = 'CrossingGradients';
         config.sizeLog2 = 4;
         config.showResolvedColor = false;
-        config.CrossingGradients_gradient = true;
         config.CrossingGradients_color1 = 0xffffff;
-        config.CrossingGradients_alpha1 = 100;
+        config.CrossingGradients_alpha1top = 0;
+        config.CrossingGradients_alpha1bottom = 100;
         config.CrossingGradients_color2 = 0x000000;
-        config.CrossingGradients_alpha2 = 100;
+        config.CrossingGradients_alpha2left = 0;
+        config.CrossingGradients_alpha2right = 100;
         config.CrossingGradients_animate = false;
       }
     );
@@ -205,11 +209,12 @@ gui.width = 340;
         config.emulatedDevice = 'NVIDIA GeForce RTX 3070';
         config.scene = 'CrossingGradients';
         config.sizeLog2 = 4;
-        config.CrossingGradients_gradient = true;
         config.CrossingGradients_color1 = 0xffffff;
-        config.CrossingGradients_alpha1 = 100;
+        config.CrossingGradients_alpha1top = 0;
+        config.CrossingGradients_alpha1bottom = 100;
         config.CrossingGradients_color2 = 0x000000;
-        config.CrossingGradients_alpha2 = 100;
+        config.CrossingGradients_alpha2left = 0;
+        config.CrossingGradients_alpha2right = 100;
         config.CrossingGradients_animate = false;
       }
     );
@@ -220,11 +225,12 @@ gui.width = 340;
         config.mode = 'emulated';
         config.emulatedDevice = 'NVIDIA GeForce RTX 3070';
         config.scene = 'CrossingGradients';
-        config.CrossingGradients_gradient = true;
         config.CrossingGradients_color1 = 0xffffff;
-        config.CrossingGradients_alpha1 = 100;
+        config.CrossingGradients_alpha1top = 0;
+        config.CrossingGradients_alpha1bottom = 100;
         config.CrossingGradients_color2 = 0x000000;
-        config.CrossingGradients_alpha2 = 100;
+        config.CrossingGradients_alpha2left = 0;
+        config.CrossingGradients_alpha2right = 100;
         config.CrossingGradients_animate = false;
       }
     );
@@ -235,11 +241,12 @@ gui.width = 340;
         config.mode = 'emulated';
         config.emulatedDevice = 'Apple M1 Pro';
         config.scene = 'CrossingGradients';
-        config.CrossingGradients_gradient = true;
         config.CrossingGradients_color1 = 0xffffff;
-        config.CrossingGradients_alpha1 = 100;
+        config.CrossingGradients_alpha1top = 0;
+        config.CrossingGradients_alpha1bottom = 100;
         config.CrossingGradients_color2 = 0x000000;
-        config.CrossingGradients_alpha2 = 100;
+        config.CrossingGradients_alpha2left = 0;
+        config.CrossingGradients_alpha2right = 100;
         config.CrossingGradients_animate = false;
       }
     );
@@ -251,7 +258,6 @@ gui.width = 340;
         config.emulatedDevice = 'Apple M1 Pro';
         config.scene = 'CrossingGradients';
         config.sizeLog2 = 3;
-        config.CrossingGradients_gradient = false;
         config.CrossingGradients_animate = true;
       }
     );
@@ -263,7 +269,6 @@ gui.width = 340;
         config.emulatedDevice = 'AMD Radeon RX 580';
         config.scene = 'CrossingGradients';
         config.sizeLog2 = 3;
-        config.CrossingGradients_gradient = false;
         config.CrossingGradients_animate = true;
       }
     );
@@ -274,11 +279,12 @@ gui.width = 340;
         config.mode = 'emulated';
         config.emulatedDevice = 'AMD Radeon RX 580';
         config.scene = 'CrossingGradients';
-        config.CrossingGradients_gradient = true;
         config.CrossingGradients_color1 = 0xffffff;
-        config.CrossingGradients_alpha1 = 100;
+        config.CrossingGradients_alpha1top = 0;
+        config.CrossingGradients_alpha1bottom = 100;
         config.CrossingGradients_color2 = 0x000000;
-        config.CrossingGradients_alpha2 = 100;
+        config.CrossingGradients_alpha2left = 0;
+        config.CrossingGradients_alpha2right = 100;
         config.CrossingGradients_animate = false;
       }
     );
@@ -290,7 +296,6 @@ gui.width = 340;
         config.emulatedDevice = 'Qualcomm Adreno 630';
         config.scene = 'CrossingGradients';
         config.sizeLog2 = 3;
-        config.CrossingGradients_gradient = false;
         config.CrossingGradients_animate = true;
       }
     );
@@ -301,11 +306,12 @@ gui.width = 340;
         config.mode = 'emulated';
         config.emulatedDevice = 'Qualcomm Adreno 630';
         config.scene = 'CrossingGradients';
-        config.CrossingGradients_gradient = true;
         config.CrossingGradients_color1 = 0xffffff;
-        config.CrossingGradients_alpha1 = 100;
+        config.CrossingGradients_alpha1top = 0;
+        config.CrossingGradients_alpha1bottom = 100;
         config.CrossingGradients_color2 = 0x000000;
-        config.CrossingGradients_alpha2 = 100;
+        config.CrossingGradients_alpha2left = 0;
+        config.CrossingGradients_alpha2right = 100;
         config.CrossingGradients_animate = false;
       }
     );
@@ -364,7 +370,6 @@ gui.width = 340;
       config.mode = 'emulated';
       config.mode2 = 'native';
       config.emulatedDevice = '(generated from your device)';
-      config.CrossingGradients_gradient = false;
       config.CrossingGradients_animate = true;
     });
   }
@@ -388,7 +393,6 @@ gui.width = 340;
     ) {
       generatorFormFolder.show();
     }
-    resetRelativeAnimationStartTime();
   };
   visualizationPanel
     .add(config, 'mode', kModeNames)
@@ -406,7 +410,6 @@ gui.width = 340;
   const generatorButtons = {
     async generate() {
       await generateAlphaToCoverage(adapter, device);
-      resetRelativeAnimationStartTime();
       updateEmulationPanels();
     },
     googleForm() {
@@ -461,23 +464,25 @@ gui.width = 340;
   sceneCrossingGradients.open();
   scenePanels.push(sceneCrossingGradients);
   {
-    sceneCrossingGradients
-      .add(config, 'CrossingGradients_gradient', true)
-      .name('use gradient');
-
     const draw1Panel = sceneCrossingGradients.addFolder('Draw 1 (top->bottom)');
     draw1Panel.open();
     draw1Panel.addColor(config, 'CrossingGradients_color1').name('color');
     draw1Panel
-      .add(config, 'CrossingGradients_alpha1', 0, 100, 0.001)
-      .name('alpha %');
+      .add(config, 'CrossingGradients_alpha1top', 0, 100, 0.001)
+      .name('alpha % top');
+    draw1Panel
+      .add(config, 'CrossingGradients_alpha1bottom', 0, 100, 0.001)
+      .name('alpha % bottom');
 
     const draw2Panel = sceneCrossingGradients.addFolder('Draw 2 (left->right)');
     draw2Panel.open();
     draw2Panel.addColor(config, 'CrossingGradients_color2').name('color');
     draw2Panel
-      .add(config, 'CrossingGradients_alpha2', 0, 100, 0.001)
-      .name('alpha %');
+      .add(config, 'CrossingGradients_alpha2left', 0, 100, 0.001)
+      .name('alpha % left');
+    draw2Panel
+      .add(config, 'CrossingGradients_alpha2right', 0, 100, 0.001)
+      .name('alpha % right');
     draw2Panel.add(config, 'CrossingGradients_animate', false).name('animate');
   }
 
@@ -738,7 +743,11 @@ function render() {
   device.queue.submit([commandEncoder.finish()]);
 }
 
-function frame() {
+let lastFrameTime = 0;
+function frame(time: DOMHighResTimeStamp) {
+  setFrameTimeStep(time - lastFrameTime);
+  lastFrameTime = time;
+
   scenes[config.scene].modifyConfigForAnimation(config);
   gui.updateDisplay();
 
