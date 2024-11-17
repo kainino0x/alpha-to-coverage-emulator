@@ -2,12 +2,13 @@ import { Config, ModeName } from '../main';
 import { DeviceName } from '../emulatedAlphaToCoverage';
 import foliageCommonWGSL from './FoliageCommon.wgsl';
 import { FoliageCommon } from './FoliageCommon';
+import { animationTime } from '../animationTime';
 
 export class Foliage extends FoliageCommon {
   modifyConfigForAnimation(config: Config) {
     if (!config.Foliage_animate) return;
 
-    config.Foliage_cameraRotation = ((performance.now() / 60_000) % 1) * 360;
+    config.Foliage_cameraRotation = ((animationTime() / 60_000) % 1) * 360;
   }
 
   render(

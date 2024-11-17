@@ -1,5 +1,4 @@
 // TODO add some notes to the article about how "moving" samples around improves the result. E.g. by showing Apple which is 2x2 and doesn't, then AMD or Qualcomm which do.
-// TODO add a way to verify emulator-generator locally (maybe add an placeholder device to the list, and embed a button that runs the generator in a popup dialog and then writes the result into kEmulatedAlphaToCoverage) - and instructions to submit new results, maybe a prefilled github issue link
 import { GUI } from 'dat.gui';
 
 import showMultisampleTextureWGSL from './ShowMultisampleTexture.wgsl';
@@ -14,6 +13,7 @@ import { CrossingGradients } from './scenes/CrossingGradients';
 import { Leaf } from './scenes/Leaf';
 import { Foliage } from './scenes/Foliage';
 import { generateAlphaToCoverage } from './emulator-generator/generateAlphaToCoverage';
+import { resetAnimationStartTime } from './animationTime';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const [adapter, device] = await (async () => {
@@ -99,6 +99,7 @@ gui.width = 340;
       const trigger = () => {
         Object.assign(config, kInitConfig);
         fn();
+        resetAnimationStartTime();
         updateEmulationPanels();
         showHideScenePanels();
         gui.updateDisplay();
@@ -395,6 +396,7 @@ gui.width = 340;
     ) {
       generatorFormFolder.show();
     }
+    resetAnimationStartTime();
   };
   visualizationPanel
     .add(config, 'mode', kModeNames)
@@ -411,8 +413,8 @@ gui.width = 340;
 
   const generatorButtons = {
     async generate() {
-      kEmulatedAlphaToCoverage['(generated from your device)'] =
-        await generateAlphaToCoverage(adapter, device);
+      await generateAlphaToCoverage(adapter, device);
+      resetAnimationStartTime();
       updateEmulationPanels();
     },
     googleForm() {

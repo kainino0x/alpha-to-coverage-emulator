@@ -1,5 +1,6 @@
 import instancedWhiteGradientWGSL from './InstancedWhiteGradient.wgsl';
 import copyMaskToBufferWGSL from './CopyMaskToBuffer.wgsl';
+import { kEmulatedAlphaToCoverage, kNullEmulator } from '../emulatedAlphaToCoverage';
 
 const dialogBox = document.createElement('dialog');
 dialogBox.close();
@@ -19,6 +20,11 @@ export async function generateAlphaToCoverage(
   device: GPUDevice
 ) {
   dialogBox.showModal();
+
+  if (kEmulatedAlphaToCoverage['(generated from your device)'] !== kNullEmulator) {
+    return;
+  }
+
   const info = adapter.info;
 
   // Render target size. It's the maximum pattern size we can detect.
@@ -272,6 +278,7 @@ fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
   return 0xf;
 }`;
   dialogText.textContent = out;
-  console.log(out);
+
+  kEmulatedAlphaToCoverage['(generated from your device)'] = out;
   return out;
 }
