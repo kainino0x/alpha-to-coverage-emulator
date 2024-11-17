@@ -374,7 +374,7 @@ gui.width = 340;
     });
   }
 
-  const visualizationPanel = gui.addFolder('Visualization');
+  const visualizationPanel = gui.addFolder('Rendering & Visualization');
   visualizationPanel.open();
   visualizationPanel.add(config, 'sampleCount', [4]);
   visualizationPanel.add(config, 'sizeLog2', 0, 13, 1).name('size = 2**');
