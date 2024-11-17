@@ -7,18 +7,20 @@ import { quitIfWebGPUNotAvailable } from './util';
 import {
   DeviceName,
   kEmulatedAlphaToCoverage,
+  kNullEmulator,
 } from './emulatedAlphaToCoverage';
 
 import { CrossingGradients } from './scenes/CrossingGradients';
 import { Leaf } from './scenes/Leaf';
 import { Foliage } from './scenes/Foliage';
+import { generateAlphaToCoverage } from './emulator-generator/generateAlphaToCoverage';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const device = await (async () => {
+const [adapter, device] = await (async () => {
   const adapter = await navigator.gpu?.requestAdapter();
   const device = await adapter?.requestDevice();
   quitIfWebGPUNotAvailable(adapter, device);
-  return device;
+  return [adapter!, device];
 })();
 
 //
@@ -97,7 +99,7 @@ gui.width = 340;
       const trigger = () => {
         Object.assign(config, kInitConfig);
         fn();
-        enableDisableDevice();
+        updateEmulationPanels();
         showHideScenePanels();
         gui.updateDisplay();
         window.location.hash = key;
@@ -363,6 +365,15 @@ gui.width = 340;
         config.FoliageCommon_featheringWidthPx = 15;
       }
     );
+    btn('generator', 'Emulator Generator', () => {
+      config.scene = 'CrossingGradients';
+      config.sizeLog2 = 3;
+      config.mode = 'emulated';
+      config.mode2 = 'native';
+      config.emulatedDevice = '(generated from your device)';
+      config.CrossingGradients_gradient = false;
+      config.CrossingGradients_animate = true;
+    });
   }
 
   const visualizationPanel = gui.addFolder('Visualization');
@@ -370,22 +381,62 @@ gui.width = 340;
   visualizationPanel.add(config, 'sampleCount', [4]);
   visualizationPanel.add(config, 'sizeLog2', 0, 13, 1).name('size = 2**');
   visualizationPanel.add(config, 'showResolvedColor', false);
-  const enableDisableDevice = () => {
+  const updateEmulationPanels = () => {
     emulatedDeviceElem.disabled = !(
       config.mode === 'emulated' || config.mode2 === 'emulated'
     );
+    if (config.emulatedDevice === '(generated from your device)') {
+      generatorFolder.show();
+    } else {
+      generatorFolder.hide();
+    }
+    if (
+      kEmulatedAlphaToCoverage['(generated from your device)'] !== kNullEmulator
+    ) {
+      generatorFormFolder.show();
+    }
   };
   visualizationPanel
     .add(config, 'mode', kModeNames)
-    .onChange(enableDisableDevice);
+    .onChange(updateEmulationPanels);
   visualizationPanel
     .add(config, 'mode2', { none: 'none', ...kModeNames })
     .name('comparison dot')
-    .onChange(enableDisableDevice);
+    .onChange(updateEmulationPanels);
   const emulatedDeviceElem = visualizationPanel
     .add(config, 'emulatedDevice', Object.keys(kEmulatedAlphaToCoverage))
-    .name('device to emulate').domElement.childNodes[0] as HTMLSelectElement;
-  enableDisableDevice();
+    .name('device to emulate')
+    .onChange(updateEmulationPanels).domElement
+    .childNodes[0] as HTMLSelectElement;
+
+  const generatorButtons = {
+    async generate() {
+      kEmulatedAlphaToCoverage['(generated from your device)'] =
+        await generateAlphaToCoverage(adapter, device);
+      updateEmulationPanels();
+    },
+    googleForm() {
+      const formURL =
+        'https://docs.google.com/forms/d/e/1FAIpQLScwAdI56MlLPms4ACR4EjGQ7nUwQLxYIigtwHnKm93zy2_4QQ/viewform?usp=pp_url&entry.1014162091=' +
+        encodeURIComponent(
+          kEmulatedAlphaToCoverage['(generated from your device)']
+        );
+      window.open(formURL, '_blank')?.focus();
+    },
+  };
+  const generatorFolder = gui.addFolder('Emulator Generator');
+  generatorFolder.open();
+  generatorFolder.hide();
+  generatorFolder
+    .add(generatorButtons, 'generate')
+    .name('Generate an emulator for this device');
+  const generatorFormFolder = generatorFolder //
+    .addFolder('Is your device different from the others here?');
+  generatorFormFolder.open();
+  generatorFormFolder.hide();
+  generatorFormFolder
+    .add(generatorButtons, 'googleForm')
+    .name('Submit it here!');
 
   const scenesPanel = gui.addFolder('Scenes');
   scenesPanel.open();
@@ -458,6 +509,7 @@ gui.width = 340;
     sceneFoliage.add(config, 'Foliage_animate', false).name('animate');
   }
 
+  updateEmulationPanels();
   showHideScenePanels();
 }
 

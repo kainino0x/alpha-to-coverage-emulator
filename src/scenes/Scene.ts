@@ -31,7 +31,7 @@ export abstract class Scene {
       emulatedDevice: DeviceName;
     }
   ) {
-    const key = JSON.stringify(keyOpts);
+    const key = keyOpts.mode + '|' + kEmulatedAlphaToCoverage[keyOpts.emulatedDevice];
     let value = this.pipelineCache.get(key);
 
     if (value === undefined) {

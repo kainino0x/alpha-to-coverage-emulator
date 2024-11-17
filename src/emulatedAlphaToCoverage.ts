@@ -1,3 +1,5 @@
+export const kNullEmulator = 'fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 { return 0xf; }';
+
 /**
  * For each device name, provides the source for a WGSL function which emulates
  * the alpha-to-coverage algorithm of that device by mapping (alpha, x, y) to
@@ -120,6 +122,7 @@ export const kEmulatedAlphaToCoverage = {
       if alpha < 31 / 32.0 { return array(0xf, 0xf, 0x7, 0xfu)[i]; }
       return 0xf;
     }`,
+    '(generated from your device)': kNullEmulator,
 };
 
 export type DeviceName = keyof typeof kEmulatedAlphaToCoverage;
