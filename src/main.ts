@@ -1,3 +1,5 @@
+// TODO: put emulator source code in article, or have a thing that shows the current emulator source code
+// TODO: have a hand-editable emulator! ideally saved in url or localstorage
 import { GUI } from 'dat.gui';
 
 import showMultisampleTextureWGSL from './ShowMultisampleTexture.wgsl';
@@ -469,20 +471,26 @@ gui.width = 340;
     draw1Panel.addColor(config, 'CrossingGradients_color1').name('color');
     draw1Panel
       .add(config, 'CrossingGradients_alpha1top', 0, 100, 0.001)
-      .name('alpha % top');
+      .name('% alpha, top');
     draw1Panel
       .add(config, 'CrossingGradients_alpha1bottom', 0, 100, 0.001)
-      .name('alpha % bottom');
+      .name('% alpha, bottom')
+      .onChange((value) => {
+        config.CrossingGradients_alpha1top = value;
+      });
 
     const draw2Panel = sceneCrossingGradients.addFolder('Draw 2 (left->right)');
     draw2Panel.open();
     draw2Panel.addColor(config, 'CrossingGradients_color2').name('color');
     draw2Panel
       .add(config, 'CrossingGradients_alpha2left', 0, 100, 0.001)
-      .name('alpha % left');
+      .name('% alpha, left');
     draw2Panel
       .add(config, 'CrossingGradients_alpha2right', 0, 100, 0.001)
-      .name('alpha % right');
+      .name('% alpha, right')
+      .onChange((value) => {
+        config.CrossingGradients_alpha2left = value;
+      });
     draw2Panel.add(config, 'CrossingGradients_animate', false).name('animate');
   }
 
