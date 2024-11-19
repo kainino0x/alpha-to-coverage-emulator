@@ -2646,7 +2646,10 @@ const fail = (() => {
     };
 })();
 
-const kNullEmulator = 'fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 { return 0; }';
+const kNullEmulator = `\
+  // No emulator yet! Click "Generate an emulator for this device".
+  fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 { return 0; }
+`;
 /**
  * For each device name, provides the source for a WGSL function which emulates
  * the alpha-to-coverage algorithm of that device by mapping (alpha, x, y) to
@@ -8971,29 +8974,24 @@ document.body.append(dialogBox);
 const dialogText = document.createElement('pre');
 dialogText.style.whiteSpace = 'pre-wrap';
 dialogBox.append(dialogText);
-const closeBtn = document.createElement('button');
-closeBtn.textContent = 'OK';
-closeBtn.onclick = () => dialogBox.close();
-dialogBox.append(closeBtn);
 async function generateAlphaToCoverage(adapter, device) {
-    dialogBox.showModal();
     if (kEmulatedAlphaToCoverage['(generated from your device)'] !== kNullEmulator) {
         return;
     }
+    dialogBox.showModal();
     const info = adapter.info;
     // Render target size. It's the maximum pattern size we can detect.
     const kSize = 16;
     const kSampleCount = 4;
     const kAlphaIncrements = 25_000;
-    const renderTarget = device
-        .createTexture({
+    const renderTargetTexture = device.createTexture({
         label: 'renderTarget',
         format: 'rgba8unorm',
         usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
         size: [kSize, kSize],
         sampleCount: kSampleCount,
-    })
-        .createView();
+    });
+    const renderTarget = renderTargetTexture.createView();
     const kBufferSize = kSize * kSize * Uint32Array.BYTES_PER_ELEMENT;
     const copyBuffer = device.createBuffer({
         label: 'copyBuffer',
@@ -9072,6 +9070,8 @@ async function generateAlphaToCoverage(adapter, device) {
             await device.queue.onSubmittedWorkDone();
         }
     }
+    renderTargetTexture.destroy();
+    copyBuffer.destroy();
     // Read back the buffer and extract the results
     const results = [];
     let lastSeenPatternString = '';
@@ -9087,7 +9087,7 @@ async function generateAlphaToCoverage(adapter, device) {
                 lastSeenPatternString = patternString;
             }
         }
-        readbackBuffer.unmap();
+        readbackBuffer.destroy();
     }
     // Try to determine a denominator for the alpha values we saw.
     let halfDenominator = kAlphaIncrements; // use this if we can't find better
@@ -9196,11 +9196,13 @@ fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
     out += `\
   return 0xf;
 }`;
-    dialogText.textContent = out;
     kEmulatedAlphaToCoverage['(generated from your device)'] = out;
+    dialogBox.close();
     return out;
 }
 
+// TODO: put emulator source code in article, or have a thing that shows the current emulator source code
+// TODO: have a hand-editable emulator! ideally saved in url or localstorage
 //
 // GUI controls
 //
@@ -9486,13 +9488,12 @@ gui.width = 340;
             config.CrossingGradients_animate = true;
         });
     }
-    const visualizationPanel = gui.addFolder('Rendering & Visualization');
-    visualizationPanel.open();
-    visualizationPanel.add(config, 'sampleCount', [4]);
-    visualizationPanel.add(config, 'sizeLog2', 0, 13, 1).name('size = 2**');
-    visualizationPanel.add(config, 'showResolvedColor', false);
+    const srcbox = document.getElementById('srcbox');
+    const srcpre = document.getElementById('srcpre');
     const updateEmulationPanels = () => {
-        emulatedDeviceElem.disabled = !(config.mode === 'emulated' || config.mode2 === 'emulated');
+        const emulationEnabled = config.mode === 'emulated' || config.mode2 === 'emulated';
+        emulatedDeviceElem.disabled = !emulationEnabled;
+        srcbox.open = emulationEnabled;
         if (config.emulatedDevice === '(generated from your device)') {
             generatorFolder.show();
         }
@@ -9502,7 +9503,13 @@ gui.width = 340;
         if (kEmulatedAlphaToCoverage['(generated from your device)'] !== kNullEmulator) {
             generatorFormFolder.show();
         }
+        srcpre.textContent = kEmulatedAlphaToCoverage[config.emulatedDevice];
     };
+    const visualizationPanel = gui.addFolder('Rendering & Visualization');
+    visualizationPanel.open();
+    visualizationPanel.add(config, 'sampleCount', [4]);
+    visualizationPanel.add(config, 'sizeLog2', 0, 13, 1).name('size = 2**');
+    visualizationPanel.add(config, 'showResolvedColor', false);
     visualizationPanel
         .add(config, 'mode', kModeNames)
         .onChange(updateEmulationPanels);
@@ -9569,19 +9576,25 @@ gui.width = 340;
         draw1Panel.addColor(config, 'CrossingGradients_color1').name('color');
         draw1Panel
             .add(config, 'CrossingGradients_alpha1top', 0, 100, 0.001)
-            .name('alpha % top');
+            .name('% alpha, top');
         draw1Panel
             .add(config, 'CrossingGradients_alpha1bottom', 0, 100, 0.001)
-            .name('alpha % bottom');
+            .name('% alpha, bottom')
+            .onChange((value) => {
+            config.CrossingGradients_alpha1top = value;
+        });
         const draw2Panel = sceneCrossingGradients.addFolder('Draw 2 (left->right)');
         draw2Panel.open();
         draw2Panel.addColor(config, 'CrossingGradients_color2').name('color');
         draw2Panel
             .add(config, 'CrossingGradients_alpha2left', 0, 100, 0.001)
-            .name('alpha % left');
+            .name('% alpha, left');
         draw2Panel
             .add(config, 'CrossingGradients_alpha2right', 0, 100, 0.001)
-            .name('alpha % right');
+            .name('% alpha, right')
+            .onChange((value) => {
+            config.CrossingGradients_alpha2left = value;
+        });
         draw2Panel.add(config, 'CrossingGradients_animate', false).name('animate');
     }
     const sceneLeaf = scenesPanel.addFolder('Leaf/Foliage scene options');
