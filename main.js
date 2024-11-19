@@ -8976,7 +8976,7 @@ dialogText.style.whiteSpace = 'pre-wrap';
 dialogBox.append(dialogText);
 async function generateAlphaToCoverage(adapter, device) {
     if (kEmulatedAlphaToCoverage['(generated from your device)'] !== kNullEmulator) {
-        return;
+        return kEmulatedAlphaToCoverage['(generated from your device)'];
     }
     dialogBox.showModal();
     const info = adapter.info;
@@ -9202,6 +9202,7 @@ fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
 }
 
 // TODO: have a hand-editable emulator! ideally saved in url or localstorage
+// TODO: sample_mask doesn't work on compat, alert about this / degrade gracefully
 //
 // GUI controls
 //
