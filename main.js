@@ -9201,7 +9201,6 @@ fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
     return out;
 }
 
-// TODO: put emulator source code in article, or have a thing that shows the current emulator source code
 // TODO: have a hand-editable emulator! ideally saved in url or localstorage
 //
 // GUI controls
