@@ -1,5 +1,7 @@
-export const kNullEmulator =
-  'fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 { return 0; }';
+export const kNullEmulator = `\
+  // No emulator yet! Click "Generate an emulator for this device".
+  fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 { return 0; }
+`;
 
 /**
  * For each device name, provides the source for a WGSL function which emulates

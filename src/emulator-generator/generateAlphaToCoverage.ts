@@ -13,40 +13,32 @@ const dialogText = document.createElement('pre');
 dialogText.style.whiteSpace = 'pre-wrap';
 dialogBox.append(dialogText);
 
-const closeBtn = document.createElement('button');
-closeBtn.textContent = 'OK';
-closeBtn.onclick = () => dialogBox.close();
-dialogBox.append(closeBtn);
-
 export async function generateAlphaToCoverage(
   adapter: GPUAdapter,
   device: GPUDevice
 ) {
-  dialogBox.showModal();
-
   if (
     kEmulatedAlphaToCoverage['(generated from your device)'] !== kNullEmulator
   ) {
     return;
   }
 
-  const info = adapter.info;
+  dialogBox.showModal();
 
+  const info = adapter.info;
   // Render target size. It's the maximum pattern size we can detect.
   const kSize = 16;
   const kSampleCount = 4;
   const kAlphaIncrements = 25_000;
 
-  const renderTarget = device
-    .createTexture({
-      label: 'renderTarget',
-      format: 'rgba8unorm',
-      usage:
-        GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
-      size: [kSize, kSize],
-      sampleCount: kSampleCount,
-    })
-    .createView();
+  const renderTargetTexture = device.createTexture({
+    label: 'renderTarget',
+    format: 'rgba8unorm',
+    usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+    size: [kSize, kSize],
+    sampleCount: kSampleCount,
+  });
+  const renderTarget = renderTargetTexture.createView();
 
   const kBufferSize = kSize * kSize * Uint32Array.BYTES_PER_ELEMENT;
   const copyBuffer = device.createBuffer({
@@ -130,6 +122,7 @@ export async function generateAlphaToCoverage(
       kBufferSize
     );
     device.queue.submit([enc.finish()]);
+
     if (alphaStep % 1000 === 0) {
       const alpha = alphaStep / kAlphaIncrements;
       dialogText.textContent = `// progress: alpha = ${(alpha * 100).toFixed(
@@ -138,6 +131,9 @@ export async function generateAlphaToCoverage(
       await device.queue.onSubmittedWorkDone();
     }
   }
+
+  renderTargetTexture.destroy();
+  copyBuffer.destroy();
 
   // Read back the buffer and extract the results
   const results: Array<{ startAlpha: number; pattern: number[] }> = [];
@@ -161,7 +157,7 @@ export async function generateAlphaToCoverage(
       }
     }
 
-    readbackBuffer.unmap();
+    readbackBuffer.destroy();
   }
 
   // Try to determine a denominator for the alpha values we saw.
@@ -282,8 +278,8 @@ fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
   out += `\
   return 0xf;
 }`;
-  dialogText.textContent = out;
-
   kEmulatedAlphaToCoverage['(generated from your device)'] = out;
+
+  dialogBox.close();
   return out;
 }

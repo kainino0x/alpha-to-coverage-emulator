@@ -1,4 +1,3 @@
-// TODO: put emulator source code in article, or have a thing that shows the current emulator source code
 // TODO: have a hand-editable emulator! ideally saved in url or localstorage
 import { GUI } from 'dat.gui';
 
@@ -376,15 +375,14 @@ gui.width = 340;
     });
   }
 
-  const visualizationPanel = gui.addFolder('Rendering & Visualization');
-  visualizationPanel.open();
-  visualizationPanel.add(config, 'sampleCount', [4]);
-  visualizationPanel.add(config, 'sizeLog2', 0, 13, 1).name('size = 2**');
-  visualizationPanel.add(config, 'showResolvedColor', false);
+  const srcbox = document.getElementById('srcbox')! as HTMLDetailsElement;
+  const srcpre = document.getElementById('srcpre')!;
   const updateEmulationPanels = () => {
-    emulatedDeviceElem.disabled = !(
-      config.mode === 'emulated' || config.mode2 === 'emulated'
-    );
+    const emulationEnabled =
+      config.mode === 'emulated' || config.mode2 === 'emulated';
+    emulatedDeviceElem.disabled = !emulationEnabled;
+    srcbox.open = emulationEnabled;
+
     if (config.emulatedDevice === '(generated from your device)') {
       generatorFolder.show();
     } else {
@@ -395,7 +393,15 @@ gui.width = 340;
     ) {
       generatorFormFolder.show();
     }
+
+    srcpre.textContent = kEmulatedAlphaToCoverage[config.emulatedDevice];
   };
+
+  const visualizationPanel = gui.addFolder('Rendering & Visualization');
+  visualizationPanel.open();
+  visualizationPanel.add(config, 'sampleCount', [4]);
+  visualizationPanel.add(config, 'sizeLog2', 0, 13, 1).name('size = 2**');
+  visualizationPanel.add(config, 'showResolvedColor', false);
   visualizationPanel
     .add(config, 'mode', kModeNames)
     .onChange(updateEmulationPanels);
