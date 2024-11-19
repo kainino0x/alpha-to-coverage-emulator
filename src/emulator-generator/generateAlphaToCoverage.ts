@@ -20,7 +20,7 @@ export async function generateAlphaToCoverage(
   if (
     kEmulatedAlphaToCoverage['(generated from your device)'] !== kNullEmulator
   ) {
-    return;
+    return kEmulatedAlphaToCoverage['(generated from your device)'];
   }
 
   dialogBox.showModal();

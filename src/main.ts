@@ -1,4 +1,5 @@
 // TODO: have a hand-editable emulator! ideally saved in url or localstorage
+// TODO: sample_mask doesn't work on compat, alert about this / degrade gracefully
 import { GUI } from 'dat.gui';
 
 import showMultisampleTextureWGSL from './ShowMultisampleTexture.wgsl';
