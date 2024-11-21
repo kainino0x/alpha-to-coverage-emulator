@@ -104,7 +104,8 @@ fn fmain(vary: Varying) -> @location(0) vec4f {
 `;
 
 var copyMaskToBufferWGSL = `@group(0) @binding(0) var tex: texture_multisampled_2d<f32>;
-@group(0) @binding(1) var<storage, read_write> out: array<u32>;
+// TODO: Explicit size is a workaround for https://crbug.com/379805731
+@group(0) @binding(1) var<storage, read_write> out: array<u32, 16 * 16>;
 
 override kSize: u32;
 override kSampleCount: u32;
@@ -191,6 +192,27 @@ const kEmulatedAlphaToCoverage = {
       if alpha < 13.5 / 16.0 { return array(0x7, 0xf, 0xe, 0x7u)[i]; }
       if alpha < 14.5 / 16.0 { return array(0xf, 0xf, 0xe, 0x7u)[i]; }
       if alpha < 15.5 / 16.0 { return array(0xf, 0xf, 0xe, 0xfu)[i]; }
+      return 0xf;
+    }`,
+    'Imagination PowerVR Rogue GE8300': `\
+    fn emulatedAlphaToCoverage(alpha: f32, xy: vec2u) -> u32 {
+      let i = (xy.y % 2) * 2 + (xy.x % 2);
+      if alpha < 7.5 / 255.0 { return array(0x0, 0x0, 0x0, 0x0u)[i]; }
+      if alpha < 23.5 / 255.0 { return array(0x1, 0x0, 0x0, 0x0u)[i]; }
+      if alpha < 39.5 / 255.0 { return array(0x1, 0x0, 0x0, 0x1u)[i]; }
+      if alpha < 55.5 / 255.0 { return array(0x1, 0x1, 0x0, 0x1u)[i]; }
+      if alpha < 71.5 / 255.0 { return array(0x1, 0x1, 0x1, 0x1u)[i]; }
+      if alpha < 87.5 / 255.0 { return array(0x9, 0x1, 0x1, 0x1u)[i]; }
+      if alpha < 103.5 / 255.0 { return array(0x9, 0x1, 0x1, 0x9u)[i]; }
+      if alpha < 119.5 / 255.0 { return array(0x9, 0x9, 0x1, 0x9u)[i]; }
+      if alpha < 135.5 / 255.0 { return array(0x9, 0x9, 0x9, 0x9u)[i]; }
+      if alpha < 151.5 / 255.0 { return array(0xb, 0x9, 0x9, 0x9u)[i]; }
+      if alpha < 167.5 / 255.0 { return array(0xb, 0x9, 0x9, 0xbu)[i]; }
+      if alpha < 183.5 / 255.0 { return array(0xb, 0xb, 0x9, 0xbu)[i]; }
+      if alpha < 199.5 / 255.0 { return array(0xb, 0xb, 0xb, 0xbu)[i]; }
+      if alpha < 215.5 / 255.0 { return array(0xf, 0xb, 0xb, 0xbu)[i]; }
+      if alpha < 231.5 / 255.0 { return array(0xf, 0xb, 0xb, 0xfu)[i]; }
+      if alpha < 247.5 / 255.0 { return array(0xf, 0xf, 0xb, 0xfu)[i]; }
       return 0xf;
     }`,
     'AMD Radeon RX 580': `\
