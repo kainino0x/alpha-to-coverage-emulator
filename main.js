@@ -8968,8 +8968,8 @@ fn fmain(vary: Varying) -> @location(0) vec4f {
 `;
 
 var copyMaskToBufferWGSL = `@group(0) @binding(0) var tex: texture_multisampled_2d<f32>;
-// TODO: Explicit size is a workaround for https://crbug.com/379805731
-@group(0) @binding(1) var<storage, read_write> out: array<u32, 16 * 16>;
+// TODO: Use an explicit size (16*16) if needed as a workaround for https://crbug.com/379805731
+@group(0) @binding(1) var<storage, read_write> out: array<u32>;
 
 override kSize: u32;
 override kSampleCount: u32;
