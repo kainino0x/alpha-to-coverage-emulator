@@ -1,5 +1,6 @@
 // TODO: have a hand-editable emulator! ideally saved in url or localstorage
 // TODO: sample_mask doesn't work on compat, alert about this / degrade gracefully
+// TODO: add timestamp support so we can see native vs emulated performance
 import { GUI } from 'dat.gui';
 
 import showMultisampleTextureWGSL from './ShowMultisampleTexture.wgsl';
